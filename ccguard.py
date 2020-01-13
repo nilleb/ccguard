@@ -1,16 +1,18 @@
+#! /usr/bin/env python3
+
+import io
 import logging
 import shlex
 import subprocess
 import sqlite3
 from pathlib import Path
 from dataclasses import dataclass
+from pycobertura import Cobertura, CoberturaDiff, TextReporterDelta, TextReporter
+from pycobertura.reporters import HtmlReporterDelta
 
-# requires:
-# - python
-# - git
 
-home = Path.home()
-dbname = home.joinpath(".ccguard.db")
+HOME = Path.home()
+DBNAME = HOME.joinpath(".ccguard.db")
 
 
 def get_output(command, working_folder=None):
@@ -36,11 +38,11 @@ class GitAdapter(object):
         ).rstrip()
 
     @staticmethod
-    def iter_git_commits(repository_folder=None):
+    def iter_git_commits(repository_folder=None, ref="HEAD"):
         count = 0
         while True:
             skip = "--skip={}".format(100 * count) if count else ""
-            command = "git rev-list {} --max-count=100 HEAD".format(skip)
+            command = "git rev-list {} --max-count=100 {}".format(skip, ref)
             commits = get_output(command, working_folder=repository_folder).split("\n")
             commits = [commit for commit in commits if commit]
             if not commits:
@@ -59,9 +61,17 @@ class GitAdapter(object):
             files = files[:-1]
         return set(files)
 
+    @staticmethod
+    def get_common_ancestor(repository_folder=None, base_branch="master", ref="HEAD"):
+        command = "git merge-base {} {}".format(base_branch, ref)
+        output = get_output(command, working_folder=repository_folder).rstrip()
+        return output
+        # at the moment, CircleCI does not provide the name of the base|target branch
+        # https://ideas.circleci.com/ideas/CCI-I-894
+
 
 class SqliteAdapter(object):
-    def __init__(self, repository_id):
+    def __init__(self, repository_id, dbname=DBNAME):
         self.repository_id = repository_id
         self.conn = sqlite3.connect(dbname)
         self._create_table()
@@ -76,7 +86,7 @@ class SqliteAdapter(object):
         commits_query = "SELECT commit_id FROM timestamped_coverage_{repository_id}".format(
             repository_id=self.repository_id
         )
-        return set(self.conn.execute(commits_query))
+        return frozenset(self.conn.execute(commits_query))
 
     def retrieve_cc_data(self, commit_id):
         query = 'SELECT coverage_data FROM timestamped_coverage_{repository_id}\
@@ -87,7 +97,9 @@ class SqliteAdapter(object):
 
     def persist(self, commit_id, data):
         query = """INSERT INTO timestamped_coverage_{repository_id}
-        (commit_id, coverage_data) VALUES (?, ?)""".format(repository_id=self.repository_id)
+        (commit_id, coverage_data) VALUES (?, ?)""".format(
+            repository_id=self.repository_id
+        )
         data_tuple = (commit_id, data)
         self.conn.execute(query, data_tuple)
         self.conn.commit()
@@ -110,147 +122,68 @@ def determine_parent_commit(db_commits, iter_callable):
                 return commit
 
 
-@dataclass
-class EntityData:
-    """Class for keeping track of an entity CC data."""
-
-    statements: int
-    miss: int
-    branch: int = 0
-    br_part: int = 0
-    ec: int = 0
-
-    def cover(self) -> float:
-        return 1.0 - self.miss / self.statements
-
-
-def cc_rep():
-    rep = {
-        "server/eventstream/init.py": EntityData(
-            statements=10, miss=0, branch=0, br_part=0, ec=100
-        ),
-        "server/eventstream/eventstream_manager.py": EntityData(
-            statements=533, miss=42, branch=130, br_part=21, ec=90
-        ),
-    }
-    return rep
-
-
-"""
-Name                                                                  Stmts   Miss Branch BrPart  Cover
--------------------------------------------------------------------------------------------------------
-server/eventstream/__init__.py                                           10      0      0      0   100%
-server/eventstream/eventstream_endpoints.py                              35     35      2      0     0%
-server/eventstream/eventstream_manager.py                               533     42    130     21    90%
-server/eventstream/eventstream_messages.py                               29     29      0      0     0%
-server/eventstream/eventstream_model.py                                  12      0      0      0   100%
-server/search/__init__.py                                                15      0      0      0   100%
-server/search/business_logic_dispatcher.py                               37     23      8      0    31%
-server/search/cloudsearch/__init__.py                                     0      0      0      0   100%
-server/search/cloudsearch/cloudsearch_endpoints.py                      166     66     66      8    59%
-server/search/cloudsearch/cloudsearch_manager.py                        523    416    200      1    15%
-server/search/cloudsearch/cloudsearch_messages.py                       362      5     18      5    97%
-server/search/cloudsearch/cloudsearch_model.py                            7      7      0      0     0%
-server/search/cloudsearch/cloudsearch_queries.py                         57     27      2      0    51%
-server/search/cloudsearch/cloudsearch_task.py                            48     33     18      0    23%
-server/search/cloudsearch/cloudsearch_tools.py                           69     54     22      0    16%
-server/search/cloudsearch/test_cloudsearch_manager.py                    37     21      4      0    39%
-server/search/dumper.py                                                  46     46     22      0     0%
-server/search/elasticsearch/__init__.py                                  94     71     32      0    18%
-server/search/elasticsearch/config.py                                     9      2      0      0    78%
-server/search/elasticsearch/converters/__init__.py                        0      0      0      0   100%
-server/search/elasticsearch/converters/base_converter.py                171    137     74      0    14%
-server/search/elasticsearch/converters/community_converter.py            31     22      8      0    23%
-server/search/elasticsearch/converters/content_converter.py              59     49     36      0    11%
-server/search/elasticsearch/converters/directory_entry_converter.py      38     26     12      0    24%
-server/search/elasticsearch/converters/media_converter.py                30     21     22      0    17%
-server/search/elasticsearch/converters/post_converter.py                 31     22     12      0    21%
-server/search/elasticsearch/converters/user_converter.py                 21     14      4      0    28%
-server/search/elasticsearch/elasticsearch_manager.py                    107     48     26      2    49%
-server/search/elasticsearch/elasticsearch_task.py                        54     54     16      0     0%
-server/search/indexer.py                                                 35     26     22      0    16%
-server/search/microservice_tools.py                                      49     14     12      2    61%
-server/search/omnisearch/__init__.py                                      0      0      0      0   100%
-"""
-
-
-def read_cc_data_from_file(fp):
-    # select the right cc reader according to the format
-    # rehydrate our EntityData according to the data in the format
-    return cc_rep()
-
-
-def rehydrate(blob):
-    return cc_rep()
-
-
-class Report(object):
-    def __init__(self, reference, challenger):
-        """
-        for each mesurable object in the challenger,
-
-        - compute the path
-        - read the coverage value
-        - save both to a dictionary
-
-        for each mesurable object in the reference,
-
-        - compute the path
-        - read the coverage value
-        - get the corresponding value in the challenger
-
-        - if the value does not exist, then we have no coverage for this item
-        - has it been deleted?
-        - has it been excluded from coverage?
-        - else (if the value exists)
-        - v(challenger) >= v(reference) => OK
-        - v(challenger) < v(reference) => NOK (regression detected)
-        """
-
-    def pretty_print(self):
-        pass
-
-
-@dataclass
-class CommitData:
-    """Class for keeping track of an entity CC data."""
-
-    commit_id: str
-    coverage_data: bytes
-
-    def persist(self, repository_id, commit_id):
-        conn.execute(
-            "insert into timestamped_coverage_{repository_id}(p) values (?)".format(
-                repository_id=repository_id
-            ),
-            (self,),
-        )
-
-
 def main():
-    fp = "cc_data_file"
+    challenger_path = "cc_data_file"
     repo_folder = "."
     should_fail_on_regression = True
+    target_branch = "master"
 
-    repository_id = get_repository_id(repo_folder)
-    create_table(repository_id)
-    db_commits = yield get_cc_commits()
-    most_recent_commit_with_data = None
+    repository_id = GitAdapter.get_repository_id(repo_folder)
 
-    def iter_callable():
-        # FIXME implement a wrapper here
-        return iter_git_commits(repo_folder)
+    diff = None
+    challenger = None
 
-    commit_id = determine_parent_commit(db_commits, iter_git_commits)
-    cc_reference_data = rehydrate(retrieve_cc_data(repository_id, commit_id))
+    with SqliteAdapter(repository_id) as adapter:
+        reference_commits = adapter.get_cc_commits()
 
-    cc_challenger_data = read_cc_data_from_file(fp)
-    cc_challenger_data.persist(repository_id, get_current_commit_id())
+        common_ancestor = GitAdapter().get_common_ancestor(repo_folder, target_branch)
 
-    report = Report(cc_reference_data, cc_challenger_data, get_git_files(repo_folder))
-    report.pretty_print()
+        def iter_callable():
+            def call():
+                return GitAdapter.iter_git_commits(repo_folder, common_ancestor)
 
-    if should_fail_on_regression and report.regression_detected():
+            return call
+
+        commit_id = determine_parent_commit(
+            reference_commits, GitAdapter.iter_git_commits
+        )
+
+        if commit_id:
+            logging.info("Found reference data for commit %s", commit_id)
+            cc_reference_data = adapter.retrieve_cc_data(repository_id, commit_id)
+            reference_fd = io.StringIO(cc_reference_data)
+
+            reference = Cobertura(reference_fd)
+            challenger = Cobertura(challenger_path)
+            diff = CoberturaDiff(reference, challenger)
+        else:
+            logging.warning("No reference code coverage data found.")
+
+        if challenger:
+            print(TextReporter(challenger).generate())
+
+            with open(challenger_path) as fd:
+                data = fd.read()
+                current_commit = GitAdapter.get_current_commit_id()
+                adapter.persist(current_commit, data)
+                logging.info("Data for commit %s persisted successfully.", current_commit)
+        else:
+            logging.error("No recent code coverage data found.")
+
+    if diff:
+        if diff.has_better_coverage():
+            print("Congratulations! You have improved the code coverage")
+        else:
+            print("Hey, there's still some unit testing to do before merging ;-)")
+
+        if diff.has_all_changes_covered():
+            print("Huge! all of your new code is fully covered!")
+
+        reporter = TextReporterDelta
+        delta = reporter(reference, challenger)
+        print(delta.generate())
+
+    if should_fail_on_regression and diff and not diff.has_better_coverage():
         exit(255)
 
 

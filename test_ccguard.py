@@ -8,8 +8,14 @@ def test_get_repository_id():
     )
 
 
-def test_guet_current_commit_id():
+def test_get_current_commit_id():
     val = ccguard.GitAdapter.get_current_commit_id()
+    assert isinstance(val, str)
+    assert "\n" not in val
+
+
+def test_get_common_ancestor():
+    val = ccguard.GitAdapter.get_common_ancestor()
     assert isinstance(val, str)
     assert "\n" not in val
 
@@ -31,6 +37,6 @@ def test_get_files():
     for vv in val:
         assert "\n" not in val
 
-def sqladapter():
+def sample_sqladapter():
     with ccguard.SqliteAdapter('test') as adapter:
         commits = adapter.get_cc_commits()

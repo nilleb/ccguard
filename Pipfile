@@ -7,6 +7,9 @@ verify_ssl = true
 
 [packages]
 ipython = "*"
+pytest = "*"
+pycobertura = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.7"
