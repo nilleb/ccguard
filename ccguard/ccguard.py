@@ -25,35 +25,38 @@ def get_output(command, working_folder=None):
 
 
 class GitAdapter(object):
-    @staticmethod
-    def get_repository_id(repository_folder=None):
+    def __init__(self, repository_folder, dbname=DBNAME):
+        self.repository_folder = repository_folder
+
+    def get_repository_id(self):
         return get_output(
-            "git rev-list --max-parents=0 HEAD", working_folder=repository_folder
+            "git rev-list --max-parents=0 HEAD", working_folder=self.repository_folder
         ).rstrip()
 
-    @staticmethod
-    def get_current_commit_id(repository_folder=None):
+    def get_current_commit_id(self):
         return get_output(
-            "git rev-parse HEAD", working_folder=repository_folder
+            "git rev-parse HEAD", working_folder=self.repository_folder
         ).rstrip()
 
-    @staticmethod
-    def iter_git_commits(repository_folder=None, ref="HEAD^"):
+    def iter_git_commits(self, ref="HEAD^"):
         count = 0
         while True:
             skip = "--skip={}".format(100 * count) if count else ""
             command = "git rev-list {} --max-count=100 {}".format(skip, ref)
-            commits = get_output(command, working_folder=repository_folder).split("\n")
+            commits = get_output(command, working_folder=self.repository_folder).split(
+                "\n"
+            )
             commits = [commit for commit in commits if commit]
             if not commits:
                 return
             count += 1
             yield commits
 
-    @staticmethod
-    def get_files(repository_folder=None):
+    def get_files(self, ):
         command = "git rev-parse --show-toplevel"
-        root_folder = get_output(command, working_folder=repository_folder).rstrip()
+        root_folder = get_output(
+            command, working_folder=self.repository_folder
+        ).rstrip()
         command = "git ls-files"
         output = get_output(command, working_folder=root_folder)
         files = output.split("\n")
@@ -61,10 +64,9 @@ class GitAdapter(object):
             files = files[:-1]
         return set(files)
 
-    @staticmethod
-    def get_common_ancestor(repository_folder=None, base_branch="master", ref="HEAD"):
+    def get_common_ancestor(self, base_branch="master", ref="HEAD"):
         command = "git merge-base {} {}".format(base_branch, ref)
-        output = get_output(command, working_folder=repository_folder).rstrip()
+        output = get_output(command, working_folder=self.repository_folder).rstrip()
         return output
         # at the moment, CircleCI does not provide the name of the base|target branch
         # https://ideas.circleci.com/ideas/CCI-I-894
@@ -160,7 +162,8 @@ def main():
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    repository_id = GitAdapter.get_repository_id(args.repository)
+    git = GitAdapter(args.repository)
+    repository_id = git.get_repository_id()
 
     diff = None
     challenger = Cobertura(args.report, source=args.repository)
@@ -169,18 +172,17 @@ def main():
         reference_commits = adapter.get_cc_commits()
         logging.debug("Found the following reference commits: %r", reference_commits)
 
-        common_ancestor = GitAdapter().get_common_ancestor(
-            args.repository, args.target_branch
+        common_ancestor = git.get_common_ancestor(args.target_branch
         )
 
         def iter_callable():
             def call():
-                return GitAdapter.iter_git_commits(args.repository, common_ancestor)
+                return git.iter_git_commits(common_ancestor)
 
             return call
 
         commit_id = determine_parent_commit(
-            reference_commits, GitAdapter.iter_git_commits
+            reference_commits, git.iter_git_commits
         )
 
         if commit_id:
@@ -212,12 +214,12 @@ def main():
 
             if args.html:
                 report = HtmlReporter(challenger)
-                with open('cc.html', 'w') as diff:
+                with open("cc.html", "w") as diff:
                     diff.write(report.generate())
 
             with open(args.report) as fd:
                 data = fd.read()
-                current_commit = GitAdapter.get_current_commit_id()
+                current_commit = git.get_current_commit_id()
                 adapter.persist(current_commit, data)
                 logging.info(
                     "Data for commit %s persisted successfully.", current_commit
@@ -241,7 +243,7 @@ def main():
 
         if args.html:
             delta = HtmlReporterDelta(reference, challenger)
-            with open('diff.html', 'w') as diff:
+            with open("diff.html", "w") as diff:
                 diff.write(delta.generate())
 
     if diff and not diff.has_better_coverage():
