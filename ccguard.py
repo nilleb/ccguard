@@ -144,12 +144,6 @@ def main():
         default="master",
     )
     parser.add_argument(
-        "--fail-on-regression",
-        dest="fail_on_regression",
-        help="whether we should fail on regression",
-        action="store_true",
-    )
-    parser.add_argument(
         "--debug",
         dest="debug",
         help="whether to print debug messages",
@@ -234,7 +228,7 @@ def main():
         delta = reporter(reference, challenger)
         print(delta.generate())
 
-    if args.fail_on_regression and diff and not diff.has_better_coverage():
+    if diff and not diff.has_better_coverage():
         exit(255)
 
 
