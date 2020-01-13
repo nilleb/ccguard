@@ -9,6 +9,7 @@ pytest-cov = "*"
 jupyter = "*"
 black = "*"
 flake8 = "*"
+tox = "*"
 
 [packages]
 ipython = "*"
