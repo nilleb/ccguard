@@ -7,9 +7,8 @@ import shlex
 import subprocess
 import sqlite3
 from pathlib import Path
-from dataclasses import dataclass
 from pycobertura import Cobertura, CoberturaDiff, TextReporterDelta, TextReporter
-from pycobertura.reporters import HtmlReporterDelta
+from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 
 
 HOME = Path.home()
@@ -149,6 +148,12 @@ def main():
         help="whether to print debug messages",
         action="store_true",
     )
+    parser.add_argument(
+        "--html",
+        dest="html",
+        help="whether to produce a html report (cc.html and diff.html)",
+        action="store_true",
+    )
 
     args = parser.parse_args()
 
@@ -205,6 +210,11 @@ def main():
             else:
                 print("{}{}".format(TextReporter(challenger).generate(), "\n"))
 
+            if args.html:
+                report = HtmlReporter(challenger)
+                with open('cc.html', 'w') as diff:
+                    diff.write(report.generate())
+
             with open(args.report) as fd:
                 data = fd.read()
                 current_commit = GitAdapter.get_current_commit_id()
@@ -217,16 +227,22 @@ def main():
 
     if diff:
         if diff.has_better_coverage():
-            print("Congratulations! You have improved the code coverage (or kept it stable).")
+            print(
+                "Congratulations! You have improved the code coverage (or kept it stable)."
+            )
         else:
             print("Hey, there's still some unit testing to do before merging ;-)")
 
         if diff.has_all_changes_covered():
             print("Huge! all of your new code is fully covered!")
 
-        reporter = TextReporterDelta
-        delta = reporter(reference, challenger)
+        delta = TextReporterDelta(reference, challenger)
         print(delta.generate())
+
+        if args.html:
+            delta = HtmlReporterDelta(reference, challenger)
+            with open('diff.html', 'w') as diff:
+                diff.write(delta.generate())
 
     if diff and not diff.has_better_coverage():
         exit(255)

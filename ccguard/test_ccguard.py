@@ -37,6 +37,8 @@ def test_get_files():
     for vv in val:
         assert "\n" not in val
 
+
 def sample_sqladapter():
-    with ccguard.SqliteAdapter('test') as adapter:
+    with ccguard.SqliteAdapter("test") as adapter:
         commits = adapter.get_cc_commits()
+        print(commits)

@@ -8,6 +8,7 @@ pytest = "*"
 pytest-cov = "*"
 jupyter = "*"
 black = "*"
+flake8 = "*"
 
 [packages]
 ipython = "*"
