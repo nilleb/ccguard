@@ -130,7 +130,7 @@ def determine_parent_commit(db_commits, iter_callable):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Display code coverage and verify regression."
+        description="You can only improve! Compare Code Coverage and prevent regressions."
     )
 
     parser.add_argument("report", help="the coverage report for the current commit ID")
@@ -140,7 +140,7 @@ def main():
     parser.add_argument(
         "--target-branch",
         dest="target_branch",
-        help="the branch to which this code will be merged",
+        help="the branch to which this code will be merged (default: master)",
         default="master",
     )
     parser.add_argument(
@@ -217,7 +217,7 @@ def main():
 
     if diff:
         if diff.has_better_coverage():
-            print("Congratulations! You have improved the code coverage")
+            print("Congratulations! You have improved the code coverage (or kept it stable).")
         else:
             print("Hey, there's still some unit testing to do before merging ;-)")
 
