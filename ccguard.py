@@ -39,7 +39,7 @@ class GitAdapter(object):
         ).rstrip()
 
     @staticmethod
-    def iter_git_commits(repository_folder=None, ref="HEAD"):
+    def iter_git_commits(repository_folder=None, ref="HEAD^"):
         count = 0
         while True:
             skip = "--skip={}".format(100 * count) if count else ""
@@ -196,7 +196,20 @@ def main():
             logging.warning("No reference code coverage data found.")
 
         if challenger:
-            print(TextReporter(challenger).generate())
+            if len(challenger.files()) > 5:
+                print("Filename      Stmts    Miss  Cover")
+                print("----------  -------  ------  -------")
+                print("..details omissed..")
+                print(
+                    "{}\t\t{}\t{}\t{}\n".format(
+                        "TOTAL",
+                        challenger.total_statements(),
+                        challenger.total_misses(),
+                        challenger.line_rate(),
+                    )
+                )
+            else:
+                print("{}{}".format(TextReporter(challenger).generate(), "\n"))
 
             with open(args.report) as fd:
                 data = fd.read()
