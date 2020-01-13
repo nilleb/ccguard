@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import io
+import argparse
 import logging
 import shlex
 import subprocess
@@ -86,14 +87,16 @@ class SqliteAdapter(object):
         commits_query = "SELECT commit_id FROM timestamped_coverage_{repository_id}".format(
             repository_id=self.repository_id
         )
-        return frozenset(self.conn.execute(commits_query))
+        return frozenset(
+            c for ct in self.conn.execute(commits_query).fetchall() for c in ct
+        )
 
     def retrieve_cc_data(self, commit_id):
         query = 'SELECT coverage_data FROM timestamped_coverage_{repository_id}\
-                WHERE commit_id="{}"'.format(
+                WHERE commit_id="{commit_id}"'.format(
             repository_id=self.repository_id, commit_id=commit_id
         )
-        return self.conn.execute(query)
+        return self.conn.execute(query).fetchone()[0]
 
     def persist(self, commit_id, data):
         query = """INSERT INTO timestamped_coverage_{repository_id}
@@ -101,8 +104,11 @@ class SqliteAdapter(object):
             repository_id=self.repository_id
         )
         data_tuple = (commit_id, data)
-        self.conn.execute(query, data_tuple)
-        self.conn.commit()
+        try:
+            self.conn.execute(query, data_tuple)
+            self.conn.commit()
+        except sqlite3.IntegrityError:
+            logging.debug("This commit seems to have already been recorded.")
 
     def _create_table(self):
         ddl = """CREATE TABLE IF NOT EXISTS `timestamped_coverage_{repository_id}` (
@@ -123,24 +129,54 @@ def determine_parent_commit(db_commits, iter_callable):
 
 
 def main():
-    challenger_path = "cc_data_file"
-    repo_folder = "."
-    should_fail_on_regression = True
-    target_branch = "master"
+    parser = argparse.ArgumentParser(
+        description="Display code coverage and verify regression."
+    )
 
-    repository_id = GitAdapter.get_repository_id(repo_folder)
+    parser.add_argument("report", help="the coverage report for the current commit ID")
+    parser.add_argument(
+        "--repository", dest="repository", help="the repository to analyze", default="."
+    )
+    parser.add_argument(
+        "--target-branch",
+        dest="target_branch",
+        help="the branch to which this code will be merged",
+        default="master",
+    )
+    parser.add_argument(
+        "--fail-on-regression",
+        dest="fail_on_regression",
+        help="whether we should fail on regression",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--debug",
+        dest="debug",
+        help="whether to print debug messages",
+        action="store_true",
+    )
+
+    args = parser.parse_args()
+
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    repository_id = GitAdapter.get_repository_id(args.repository)
 
     diff = None
-    challenger = None
+    challenger = Cobertura(args.report, source=args.repository)
 
     with SqliteAdapter(repository_id) as adapter:
         reference_commits = adapter.get_cc_commits()
+        logging.debug("Found the following reference commits: %r", reference_commits)
 
-        common_ancestor = GitAdapter().get_common_ancestor(repo_folder, target_branch)
+        common_ancestor = GitAdapter().get_common_ancestor(
+            args.repository, args.target_branch
+        )
 
         def iter_callable():
             def call():
-                return GitAdapter.iter_git_commits(repo_folder, common_ancestor)
+                return GitAdapter.iter_git_commits(args.repository, common_ancestor)
 
             return call
 
@@ -150,11 +186,11 @@ def main():
 
         if commit_id:
             logging.info("Found reference data for commit %s", commit_id)
-            cc_reference_data = adapter.retrieve_cc_data(repository_id, commit_id)
+            cc_reference_data = adapter.retrieve_cc_data(commit_id)
+            logging.debug("Reference data: %r", cc_reference_data)
             reference_fd = io.StringIO(cc_reference_data)
 
-            reference = Cobertura(reference_fd)
-            challenger = Cobertura(challenger_path)
+            reference = Cobertura(reference_fd, source=args.repository)
             diff = CoberturaDiff(reference, challenger)
         else:
             logging.warning("No reference code coverage data found.")
@@ -162,11 +198,13 @@ def main():
         if challenger:
             print(TextReporter(challenger).generate())
 
-            with open(challenger_path) as fd:
+            with open(args.report) as fd:
                 data = fd.read()
                 current_commit = GitAdapter.get_current_commit_id()
                 adapter.persist(current_commit, data)
-                logging.info("Data for commit %s persisted successfully.", current_commit)
+                logging.info(
+                    "Data for commit %s persisted successfully.", current_commit
+                )
         else:
             logging.error("No recent code coverage data found.")
 
@@ -183,7 +221,7 @@ def main():
         delta = reporter(reference, challenger)
         print(delta.generate())
 
-    if should_fail_on_regression and diff and not diff.has_better_coverage():
+    if args.fail_on_regression and diff and not diff.has_better_coverage():
         exit(255)
 
 

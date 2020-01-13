@@ -1,2 +1,3 @@
-import IPython
-IPython.start_ipython(argv=[])
+import ccguard
+print("%load_ext autoreload")
+print("%autoreload 2")
