@@ -5,3 +5,4 @@ coverage.xml
 dist
 ccguard.egg-info
 build
+.tox
