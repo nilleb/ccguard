@@ -9,6 +9,29 @@ ccguard compares the current code coverage to past code coverage. ccguard fails 
 - python
 - git
 
+## welcome beta testers: setup and execution
+
+```sh
+# install a venv so to keep your system interpreter clean
+python3 -m venv env
+source env/bin/activate
+# install python packaging tools
+pip install wheel
+# build this package
+python3 setup.py bdist_wheel
+# install it
+python3 -m pip install dist/*.whl
+# use it!
+cd your-favorite-source-folder
+# execute unit tests, collecting code coverage here
+ccguard coverage.xml
+# change your code somehow, commit
+# execute unit tests, collecting code coverage here
+ccguard coverage.xml
+```
+
+(should also work on python2)
+
 ## execute this tool
 
 ```sh

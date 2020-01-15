@@ -6,3 +6,4 @@ dist
 ccguard.egg-info
 build
 .tox
+env

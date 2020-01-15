@@ -7,11 +7,18 @@ pytest -v --cov-report xml --cov ccguard
 # to execute the linter
 flake8 ccguard/ccguard.py
 
+# to upload the package
+python3 -m twine upload dist/*
+
+# start a virtual environment
+python3 -m venv env
+source env/bin/activate
+
+# to build the package in a venv
+pip install wheel
+
 # to prepare this package
-python setup.py bdist_wheel
+python3 setup.py bdist_wheel
 
 # to install this package locally
-python -m pip install dist/
-
-# to upload the package
-python -m twine upload dist/*
+python3 -m pip install dist/*.whl
