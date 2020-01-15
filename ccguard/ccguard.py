@@ -214,8 +214,8 @@ def main():
 
             if args.html:
                 report = HtmlReporter(challenger)
-                with open("cc.html", "w") as diff:
-                    diff.write(report.generate())
+                with open("cc.html", "w") as ccfile:
+                    ccfile.write(report.generate())
 
             with open(args.report) as fd:
                 data = fd.read()
@@ -243,8 +243,8 @@ def main():
 
         if args.html:
             delta = HtmlReporterDelta(reference, challenger)
-            with open("diff.html", "w") as diff:
-                diff.write(delta.generate())
+            with open("diff.html", "w") as diff_file:
+                diff_file.write(delta.generate())
 
     if diff and not diff.has_better_coverage():
         exit(255)
