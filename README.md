@@ -60,6 +60,30 @@ pip install pytest-cov
 pytest -v --cov-report xml --cov my_project
 ```
 
+## javascript
+
+add to your `package.json` the required `cobertura` settings
+
+```json
+{
+  "name": "continuous-test-code-coverage-guide",
+  "scripts": {
+    "start": "webpack",
+    "test": "jest --coverage --coverageDirectory=output/coverage/jest"
+  },
+  ...
+  "jest": {
+    "coverageReporters": [
+      "text",
+      "cobertura"
+    ]
+    ...
+  }
+}
+```
+
+pass to ccguard the path to the coverage directory
+
 ## credits
 
 - [Alexandre Conrad](https://pypi.org/user/aconrad/) for his wonderful pycobertura
