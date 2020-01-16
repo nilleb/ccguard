@@ -32,6 +32,18 @@ ccguard coverage.xml
 
 (should also work on python2)
 
+## if you want to contribute
+
+```sh
+# install a venv so to keep your system interpreter clean
+python3 -m venv env
+source env/bin/activate
+
+pip install -r dev-requirements.txt
+```
+
+there is not a pre-commit hook yet, please execute flake8, black and ccguard against all of your changes.
+
 ## execute this tool
 
 ```sh
