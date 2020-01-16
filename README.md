@@ -41,6 +41,7 @@ source env/bin/activate
 
 pip install -r dev-requirements.txt
 pip install --upgrade pip
+cp pre-commit .git/hooks/pre-commit
 ```
 
 please execute flake8, black, pytest and ccguard against all of your changes.
