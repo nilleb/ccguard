@@ -7,3 +7,5 @@ ccguard.egg-info
 build
 .tox
 env
+cc.html
+diff.html

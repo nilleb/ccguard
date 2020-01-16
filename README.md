@@ -40,9 +40,18 @@ python3 -m venv env
 source env/bin/activate
 
 pip install -r dev-requirements.txt
+pip install --upgrade pip
 ```
 
-there is not a pre-commit hook yet, please execute flake8, black and ccguard against all of your changes.
+please execute flake8, black, pytest and ccguard against all of your changes.
+(a pre-commit hook will ensure that everythng is fine before letting you commit)
+
+```sh
+pytest -v --cov-report xml --cov ccguard
+flake8 ccguard/ccguard.py
+black ccguard/ccguard.py
+python ccguard/ccguard.py --html coverage.xml --repository ccguard
+```
 
 ## execute this tool
 
