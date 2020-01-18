@@ -1,4 +1,5 @@
 import ccguard
+from unittest.mock import MagicMock
 
 
 def test_get_repository_id():
@@ -42,3 +43,22 @@ def sample_sqladapter():
     with ccguard.SqliteAdapter("test") as adapter:
         commits = adapter.get_cc_commits()
         print(commits)
+
+
+def test_persist():
+    commit_id = "test"
+    repo = MagicMock()
+    repo.get_current_commit_id = MagicMock(return_value=commit_id)
+
+    reference = MagicMock()
+    reference.persist = MagicMock()
+
+    data = "<coverage/>"
+    path = "ccguard/test_data/fake_coverage.xml"
+    with open(path) as fd:
+        data = fd.read()
+
+    ccguard.persist(repo, reference, path)
+
+    repo.get_current_commit_id.assert_called()
+    reference.persist.assert_called_with(commit_id, data)

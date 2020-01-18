@@ -52,7 +52,7 @@ class GitAdapter(object):
             count += 1
             yield commits
 
-    def get_files(self, ):
+    def get_files(self,):
         command = "git rev-parse --show-toplevel"
         root_folder = get_output(
             command, working_folder=self.repository_folder
@@ -129,6 +129,14 @@ def determine_parent_commit(db_commits, iter_callable):
                 return commit
 
 
+def persist(repo_adapter, reference_adapter, report_file):
+    with open(report_file) as fd:
+        data = fd.read()
+        current_commit = repo_adapter.get_current_commit_id()
+        reference_adapter.persist(current_commit, data)
+        logging.info("Data for commit %s persisted successfully.", current_commit)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="You can only improve! Compare Code Coverage and prevent regressions."
@@ -156,6 +164,12 @@ def main():
         help="whether to produce a html report (cc.html and diff.html)",
         action="store_true",
     )
+    parser.add_argument(
+        "--consider-uncommitted-changes",
+        dest="uncommitted",
+        help="whether to consider uncommitted changes. reference will not be persisted.",
+        action="store_true",
+    )
 
     args = parser.parse_args()
 
@@ -172,18 +186,17 @@ def main():
         reference_commits = adapter.get_cc_commits()
         logging.debug("Found the following reference commits: %r", reference_commits)
 
-        common_ancestor = git.get_common_ancestor(args.target_branch
-        )
+        common_ancestor = git.get_common_ancestor(args.target_branch)
+
+        ref = "HEAD" if args.uncommitted else "HEAD^"
 
         def iter_callable():
             def call():
-                return git.iter_git_commits(common_ancestor)
+                return git.iter_git_commits(common_ancestor, ref=ref)
 
             return call
 
-        commit_id = determine_parent_commit(
-            reference_commits, git.iter_git_commits
-        )
+        commit_id = determine_parent_commit(reference_commits, git.iter_git_commits)
 
         if commit_id:
             logging.info("Found reference data for commit %s", commit_id)
@@ -217,23 +230,19 @@ def main():
                 with open("cc.html", "w") as ccfile:
                     ccfile.write(report.generate())
 
-            with open(args.report) as fd:
-                data = fd.read()
-                current_commit = git.get_current_commit_id()
-                adapter.persist(current_commit, data)
-                logging.info(
-                    "Data for commit %s persisted successfully.", current_commit
-                )
+            if not args.uncommitted:
+                persist(git, adapter, args.report)
         else:
             logging.error("No recent code coverage data found.")
 
     if diff:
         if diff.has_better_coverage():
             print(
-                "Congratulations! You have improved the code coverage (or kept it stable)."
+                "✨ 🍰 ✨  Congratulations! "
+                "You have improved the code coverage (or kept it stable)."
             )
         else:
-            print("Hey, there's still some unit testing to do before merging ;-)")
+            print("💥 💔 💥  Hey, there's still some unit testing to do before merging 😉 ")
 
         if diff.has_all_changes_covered():
             print("Huge! all of your new code is fully covered!")
