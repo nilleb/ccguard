@@ -12,33 +12,19 @@ ccguard compares the current code coverage to past code coverage. ccguard fails 
 - python
 - git
 
-## welcome beta testers: setup and execution
+## welcome beta testers: setup
 
 ```sh
-# install a venv so to keep your system interpreter clean
-python3 -m venv env
-source env/bin/activate
-# install python packaging tools
-pip install wheel
-# build this package
-python3 setup.py bdist_wheel
-# install it
-python3 -m pip install dist/*.whl
-# use it!
-cd your-favorite-source-folder
-# execute unit tests, collecting code coverage here
-ccguard coverage.xml
-# change your code somehow, commit
-# execute unit tests, collecting code coverage here
-ccguard coverage.xml
+# prepare the package and install it
+./distrib.sh
 ```
 
-(should also work on python2)
+Should work on both python2 and python3. But python2 is not anymore supported.
 
-## if you want to contribute
+## contribute
 
 ```sh
-./bootstraph.sh
+./bootstrap.sh
 ```
 
 please execute flake8, black, pytest and ccguard against all of your changes.
@@ -51,8 +37,18 @@ please execute flake8, black, pytest and ccguard against all of your changes.
 ## execute this tool
 
 ```sh
-# produce coverage data executing your unit tests and covert them to cobertura, then
-python ccguard.py coverage.xml
+cd your-favorite-source-folder
+# execute unit tests, collecting code coverage here
+ccguard.py coverage.xml
+# change your code somehow
+# execute unit tests, collecting code coverage
+# then verify that your code coverage has not decreased
+ccguard.py --consider-uncommitted-changes coverage.xml
+# if you are rather a visual person, check cc.html and diff.html
+ccguard.py --html --consider-uncommitted-changes coverage.xml
+# if needed to display the line coverage for each file in the HTML report,
+# fine tune the source files path with the --repository argument
+ccguard.py --html --consider-uncommitted-changes coverage.xml --repository src/
 ```
 
 please see [how to produce code coverage data](docs/how to produce code coverage data.md) to know how to produce code coverage data in your favourite language.

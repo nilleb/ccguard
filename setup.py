@@ -16,6 +16,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         'pycobertura',
+        'gitpython'
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
