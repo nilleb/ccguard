@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+env/bin/flake8 ccguard/ccguard.py
+env/bin/black --check ccguard/*.py
+env/bin/pytest --cov-report xml --cov ccguard
+env/bin/python ccguard/ccguard.py --html coverage.xml --repository ccguard --consider-uncommitted-changes

@@ -4,7 +4,8 @@ you can only improve! :-)
 
 ccguard compares the current code coverage to past code coverage. ccguard fails unless your new code coverage is equal or better than your past code coverage!
 
-![alt text](static/screenshot.png "ccguard.py in action")
+![alt text](static/success.png "ccguard.py in action")
+![alt text](static/success.png "so bad, a regression")
 
 ## requires
 
@@ -37,23 +38,14 @@ ccguard coverage.xml
 ## if you want to contribute
 
 ```sh
-# install a venv so to keep your system interpreter clean
-python3 -m venv env
-source env/bin/activate
-
-pip install -r dev-requirements.txt
-pip install --upgrade pip
-cp pre-commit .git/hooks/pre-commit
+./bootstraph.sh
 ```
 
 please execute flake8, black, pytest and ccguard against all of your changes.
 (a pre-commit hook will ensure that everythng is fine before letting you commit)
 
 ```sh
-pytest -v --cov-report xml --cov ccguard
-flake8 ccguard/ccguard.py
-black ccguard/ccguard.py
-python ccguard/ccguard.py --html coverage.xml --repository ccguard
+./pre-commit
 ```
 
 ## execute this tool
@@ -63,51 +55,9 @@ python ccguard/ccguard.py --html coverage.xml --repository ccguard
 python ccguard.py coverage.xml
 ```
 
-## documentation: how to produce coverage data
-
-### golang
-
-```sh
-# install cobertura converter (only once)
-go get github.com/t-yuki/gocover-cobertura
-# compute the code coverage and convert it to cobertura
-go test -coverprofile=coverage.txt -covermode count github.com/gorilla/mux
-gocover-cobertura < coverage.txt > coverage.xml
-```
-
-## python
-
-```sh
-# install cobertura converter (only once)
-pip install pytest-cov
-# compute the code coverage and convert it to cobertura
-pytest -v --cov-report xml --cov my_project
-```
-
-## javascript
-
-add to your `package.json` the required `cobertura` settings
-
-```json
-{
-  "name": "continuous-test-code-coverage-guide",
-  "scripts": {
-    "start": "webpack",
-    "test": "jest --coverage --coverageDirectory=output/coverage/jest"
-  },
-  ...
-  "jest": {
-    "coverageReporters": [
-      "text",
-      "cobertura"
-    ]
-    ...
-  }
-}
-```
-
-pass to ccguard the path to the coverage directory
+please see [how to produce code coverage data](docs/how to produce code coverage data.md) to know how to produce code coverage data in your favourite language.
 
 ## credits
 
 - [Alexandre Conrad](https://pypi.org/user/aconrad/) for his wonderful pycobertura
+- all the beta testers for the precious feedback

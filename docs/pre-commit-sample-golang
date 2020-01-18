@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+# github.com/golangci/golangci-lint
+# go get github.com/t-yuki/gocover-cobertura
+# pip -i ccguard
+golangci-lint run --config=.golangci.yml
+# compute the code coverage and convert it to cobertura
+go test -coverprofile=coverage.txt -covermode count ./...
+gocover-cobertura < coverage.txt > coverage.xml
+ccguard --html coverage.xml --consider-uncommitted-changes

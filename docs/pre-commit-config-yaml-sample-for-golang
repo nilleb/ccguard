@@ -1,0 +1,26 @@
+  - repo: local
+    hooks:
+      - id: golangci-lint
+        name: 'golangci-lint'
+        entry: 'golangci-lint run'
+        args: ['--config=.golangci.yml']
+        types: [go]
+        language: 'system'
+        pass_filenames: false
+        files: '\.go$'
+        description: "Runs `golangci-lint`, requires https://github.com/golangci/golangci-lint"
+      - id: gocov
+        name: 'go test and coverage'
+        entry: 'go test -coverprofile=coverage.txt -covermode count ./...'
+        language: 'system'
+        description: "Runs unit tests."
+      - id: cobertura
+        name: 'convert cc to cobertura format'
+        entry: 'gocover-cobertura < coverage.txt > coverage.xml'
+        language: 'system'
+        description: "Converts coverage info to cobertura. Requires https://github.com/t-yuki/gocover-cobertura"
+      - id: ccguard
+        name: 'prevent code coverage regressions'
+        entry: 'ccguard --consider-uncommitted-changes coverage.xml'
+        language: 'system'
+        description: "Prevents code coverage regressions. Requires ccguard https://github.com/nilleb/ccguard"
