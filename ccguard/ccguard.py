@@ -38,13 +38,14 @@ class GitAdapter(object):
             "git rev-parse HEAD", working_folder=self.repository_folder
         ).rstrip()
 
-    def iter_git_commits(self, common_ancestor="master", ref="HEAD^"):
+    def iter_git_commits(self, refs=None):
+        if not refs:
+            refs = ["HEAD^"]
+
         count = 0
         while True:
             skip = "--skip={}".format(100 * count) if count else ""
-            command = "git rev-list {} --max-count=100 {} {}".format(
-                skip, common_ancestor, ref
-            )
+            command = "git rev-list {} --max-count=100 {}".format(skip, " ".join(refs))
             commits = get_output(command, working_folder=self.repository_folder).split(
                 "\n"
             )
@@ -195,11 +196,11 @@ def main():
 
         common_ancestor = git.get_common_ancestor(args.target_branch)
 
-        ref = "HEAD" if args.uncommitted else "HEAD^"
+        ref = common_ancestor if args.uncommitted else "{}^".format(common_ancestor)
 
         def iter_callable():
             def call():
-                return git.iter_git_commits(common_ancestor, ref=ref)
+                return git.iter_git_commits([ref])
 
             return call
 
