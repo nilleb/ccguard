@@ -1,1 +1,2 @@
 pycobertura==0.10.5
+gitpython==3.0.5
