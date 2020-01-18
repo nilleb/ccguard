@@ -5,7 +5,7 @@ you can only improve! :-)
 ccguard compares the current code coverage to past code coverage. ccguard fails unless your new code coverage is equal or better than your past code coverage!
 
 ![alt text](static/success.png "ccguard.py in action")
-![alt text](static/success.png "so bad, a regression")
+![alt text](static/failure.png "so bad, a regression")
 
 ## requires
 
