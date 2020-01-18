@@ -4,6 +4,8 @@ you can only improve! :-)
 
 ccguard compares the current code coverage to past code coverage. ccguard fails unless your new code coverage is equal or better than your past code coverage!
 
+![alt text](static/screenshot.png "ccguard.py in action")
+
 ## requires
 
 - python
