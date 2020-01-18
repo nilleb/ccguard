@@ -38,11 +38,13 @@ class GitAdapter(object):
             "git rev-parse HEAD", working_folder=self.repository_folder
         ).rstrip()
 
-    def iter_git_commits(self, ref="HEAD^"):
+    def iter_git_commits(self, common_ancestor="master", ref="HEAD^"):
         count = 0
         while True:
             skip = "--skip={}".format(100 * count) if count else ""
-            command = "git rev-list {} --max-count=100 {}".format(skip, ref)
+            command = "git rev-list {} --max-count=100 {} {}".format(
+                skip, common_ancestor, ref
+            )
             commits = get_output(command, working_folder=self.repository_folder).split(
                 "\n"
             )
@@ -50,6 +52,7 @@ class GitAdapter(object):
             if not commits:
                 return
             count += 1
+            logging.debug("Returning as previous revisions: %r", commits)
             yield commits
 
     def get_files(self,):
@@ -137,7 +140,7 @@ def persist(repo_adapter, reference_adapter, report_file):
         logging.info("Data for commit %s persisted successfully.", current_commit)
 
 
-def main():
+def parse_args(args=None):
     parser = argparse.ArgumentParser(
         description="You can only improve! Compare Code Coverage and prevent regressions."
     )
@@ -171,7 +174,11 @@ def main():
         action="store_true",
     )
 
-    args = parser.parse_args()
+    return parser.parse_args(args)
+
+
+def main():
+    args = parse_args()
 
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -196,7 +203,7 @@ def main():
 
             return call
 
-        commit_id = determine_parent_commit(reference_commits, git.iter_git_commits)
+        commit_id = determine_parent_commit(reference_commits, iter_callable())
 
         if commit_id:
             logging.info("Found reference data for commit %s", commit_id)

@@ -62,3 +62,12 @@ def test_persist():
 
     repo.get_current_commit_id.assert_called()
     reference.persist.assert_called_with(commit_id, data)
+
+
+def test_parse():
+    args = ccguard.parse_args(
+        ["--consider-uncommitted-changes", "--debug", "coverage.xml"]
+    )
+    assert args.debug
+    assert args.uncommitted
+    assert args.report == "coverage.xml"
