@@ -1,0 +1,1 @@
+env/bin/python ccguard/ccguard.py --html coverage.xml --repository ccguard
