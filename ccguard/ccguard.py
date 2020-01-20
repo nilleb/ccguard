@@ -234,6 +234,72 @@ def parse_args(args=None):
     return parser.parse_args(args)
 
 
+def adapter_factory(config):
+    adapter_class = (
+        RedisAdapter if config.get("adapter.class", None) == "redis" else SqliteAdapter
+    )
+    return adapter_class
+
+
+def iter_callable(git, ref):
+    def call():
+        return git.iter_git_commits([ref])
+
+    return call
+
+
+def print_cc_report(challenger, html_too=False, log_function=print):
+    if len(challenger.files()) > 5:
+        log_function("Filename      Stmts    Miss  Cover")
+        log_function("----------  -------  ------  -------")
+        log_function("..details omissed..")
+        log_function(
+            "{}\t\t{}\t{}\t{}\n".format(
+                "TOTAL",
+                challenger.total_statements(),
+                challenger.total_misses(),
+                challenger.line_rate(),
+            )
+        )
+    else:
+        log_function("{}{}".format(TextReporter(challenger).generate(), "\n"))
+
+    if html_too:
+        report = HtmlReporter(challenger)
+        with open("cc.html", "w") as ccfile:
+            ccfile.write(report.generate())
+
+
+def print_diff_message(diff, log_function=print):
+    if diff.has_better_coverage():
+        log_function(
+            "✨ 🍰 ✨  Congratulations! "
+            "You have improved the code coverage (or kept it stable)."
+        )
+    else:
+        log_function(
+            "💥 💔 💥  Hey, there's still some unit testing to do before merging 😉 "
+        )
+
+    if diff.has_all_changes_covered():
+        log_function("💯 Huge! all of your new code is fully covered!")
+
+    if diff.diff_total_misses() < 0:
+        log_function(
+            "🙏🏻 🙏🏻 🙏🏻 Kudos! you have reduced the number of uncovered statements!"
+        )
+
+
+def print_delta_report(reference, challenger, html_too=False, log_function=print):
+    delta = TextReporterDelta(reference, challenger)
+    log_function(delta.generate())
+
+    if html_too:
+        delta = HtmlReporterDelta(reference, challenger)
+        with open("diff.html", "w") as diff_file:
+            diff_file.write(delta.generate())
+
+
 def main():
     args = parse_args()
 
@@ -243,12 +309,12 @@ def main():
     git = GitAdapter(args.repository)
     repository_id = git.get_repository_id()
 
-    diff = None
+    diff, reference = None, None
     challenger = Cobertura(args.report, source=args.repository)
 
     config = configuration(args.repository)
 
-    with SqliteAdapter(repository_id, config) as adapter:
+    with adapter_factory(config)(repository_id, config) as adapter:
         reference_commits = adapter.get_cc_commits()
         logging.debug("Found the following reference commits: %r", reference_commits)
 
@@ -256,45 +322,20 @@ def main():
 
         ref = common_ancestor if args.uncommitted else "{}^".format(common_ancestor)
 
-        def iter_callable():
-            def call():
-                return git.iter_git_commits([ref])
-
-            return call
-
-        commit_id = determine_parent_commit(reference_commits, iter_callable())
+        commit_id = determine_parent_commit(reference_commits, iter_callable(git, ref))
 
         if commit_id:
-            logging.info("Found reference data for commit %s", commit_id)
+            logging.info("Retrieving data for refrence commit %s.", commit_id)
             cc_reference_data = adapter.retrieve_cc_data(commit_id)
             logging.debug("Reference data: %r", cc_reference_data)
             reference_fd = io.StringIO(cc_reference_data)
-
             reference = Cobertura(reference_fd, source=args.repository)
             diff = CoberturaDiff(reference, challenger)
         else:
             logging.warning("No reference code coverage data found.")
 
         if challenger:
-            if len(challenger.files()) > 5:
-                print("Filename      Stmts    Miss  Cover")
-                print("----------  -------  ------  -------")
-                print("..details omissed..")
-                print(
-                    "{}\t\t{}\t{}\t{}\n".format(
-                        "TOTAL",
-                        challenger.total_statements(),
-                        challenger.total_misses(),
-                        challenger.line_rate(),
-                    )
-                )
-            else:
-                print("{}{}".format(TextReporter(challenger).generate(), "\n"))
-
-            if args.html:
-                report = HtmlReporter(challenger)
-                with open("cc.html", "w") as ccfile:
-                    ccfile.write(report.generate())
+            print_cc_report(challenger, args.html)
 
             if not args.uncommitted:
                 persist(git, adapter, args.report)
@@ -302,24 +343,8 @@ def main():
             logging.error("No recent code coverage data found.")
 
     if diff:
-        if diff.has_better_coverage():
-            print(
-                "✨ 🍰 ✨  Congratulations! "
-                "You have improved the code coverage (or kept it stable)."
-            )
-        else:
-            print("💥 💔 💥  Hey, there's still some unit testing to do before merging 😉 ")
-
-        if diff.has_all_changes_covered():
-            print("Huge! all of your new code is fully covered!")
-
-        delta = TextReporterDelta(reference, challenger)
-        print(delta.generate())
-
-        if args.html:
-            delta = HtmlReporterDelta(reference, challenger)
-            with open("diff.html", "w") as diff_file:
-                diff_file.write(delta.generate())
+        print_diff_message(diff)
+        print_delta_report(reference, challenger, args.html)
 
     if diff and not diff.has_better_coverage():
         exit(255)

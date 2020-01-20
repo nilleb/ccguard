@@ -1,6 +1,7 @@
 import ccguard
 import redis
 from unittest.mock import MagicMock
+from pycobertura import Cobertura
 
 
 def test_get_repository_id():
@@ -125,3 +126,26 @@ def test_redis_adapter():
     config = ccguard.configuration("ccguard/test_data/configuration_override")
     with ccguard.RedisAdapter("test", config) as adapter:
         adapter_scenario(adapter)
+
+
+def test_adapter_factory():
+    config = dict(ccguard.DEFAULT_CONFIGURATION)
+    adapter_class = ccguard.adapter_factory(config)
+    assert adapter_class is ccguard.SqliteAdapter
+
+
+def test_print_cc_report():
+    report = Cobertura("ccguard/test_data/sample_coverage.xml")
+    output = []
+    log_function = lambda a: output.append(a)
+    ccguard.print_cc_report(report, log_function=log_function)
+
+
+def test_iter_callable():
+    mock = MagicMock()
+    ref = "test"
+    refs = []
+    mock.iter_git_commits = MagicMock(side_effect=lambda aList: refs.extend(aList))
+    ccguard.iter_callable(mock, ref)()
+    assert ref in refs
+    assert len(refs) == 1
