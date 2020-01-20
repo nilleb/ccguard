@@ -25,7 +25,7 @@ def get_output(command, working_folder=None):
 
 
 class GitAdapter(object):
-    def __init__(self, repository_folder=".", dbname=DBNAME):
+    def __init__(self, repository_folder="."):
         self.repository_folder = repository_folder
 
     def get_repository_id(self):
