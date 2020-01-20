@@ -1,4 +1,5 @@
 import ccguard
+import redis
 from unittest.mock import MagicMock
 
 
@@ -77,18 +78,50 @@ def test_configuration():
     assert dbpath != dbpath_override
 
 
+def adapter_scenario(adapter):
+    commits = adapter.get_cc_commits()
+    adapter.persist("one", "<coverage>1</coverage>")
+    adapter.persist("two", "<coverage>2</coverage>")
+    adapter.persist("thr", "<coverage>3</coverage>")
+    commits = adapter.get_cc_commits()
+    assert len(commits) == 3
+    data = adapter.retrieve_cc_data("one")
+    assert "1" in data
+    data = adapter.retrieve_cc_data("two")
+    assert "2" in data
+    data = adapter.retrieve_cc_data("thr")
+    assert "3" in data
+
+
 def test_sqladapter():
     config = ccguard.configuration("ccguard/test_data/configuration_override")
     with ccguard.SqliteAdapter("test", config) as adapter:
-        commits = adapter.get_cc_commits()
-        adapter.persist("one", "<coverage>1</coverage>")
-        adapter.persist("two", "<coverage>2</coverage>")
-        adapter.persist("thr", "<coverage>3</coverage>")
-        commits = adapter.get_cc_commits()
-        assert len(commits) == 3
-        data = adapter.retrieve_cc_data("one")
-        assert "1" in data
-        data = adapter.retrieve_cc_data("two")
-        assert "2" in data
-        data = adapter.retrieve_cc_data("thr")
-        assert "3" in data
+        adapter_scenario(adapter)
+
+
+def setup_redis_mock():
+    data = {}
+
+    def set_data(a, b, c):
+        v = data.get(a, {})
+        v[b] = c
+        data[a] = v
+        print(data)
+
+    hkeys = lambda a: data.get(a, {}).keys()
+    get_data = lambda a, b: data.get(a, {}).get(b)
+
+    redis_client = MagicMock()
+    redis_client.hkeys = MagicMock(side_effect=hkeys)
+    redis_client.hset = MagicMock(side_effect=set_data)
+    redis_client.hget = MagicMock(side_effect=get_data)
+
+    return redis_client
+
+
+def test_redis_adapter():
+    redis.Redis = MagicMock(return_value=setup_redis_mock())
+
+    config = ccguard.configuration("ccguard/test_data/configuration_override")
+    with ccguard.RedisAdapter("test", config) as adapter:
+        adapter_scenario(adapter)

@@ -7,7 +7,9 @@ import logging
 import shlex
 import subprocess
 import sqlite3
+from datetime import datetime
 from pathlib import Path
+import redis
 from pycobertura import Cobertura, CoberturaDiff, TextReporterDelta, TextReporter
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 
@@ -17,6 +19,10 @@ DB_FILE_NAME = ".ccguard.db"
 CONFIG_FILE_NAME = ".ccguard.config"
 
 DEFAULT_CONFIGURATION = {
+    "redis.host": "localhost",
+    "redis.port": 6379,
+    "redis.db": 0,
+    "redis.password": None,
     "sqlite.dbpath": HOME.joinpath(DB_FILE_NAME),
 }
 
@@ -146,6 +152,34 @@ class SqliteAdapter(object):
     );"""
         statement = ddl.format(repository_id=self.repository_id)
         self.conn.execute(statement)
+
+
+class RedisAdapter(object):
+    def __init__(self, repository_id, config={}):
+        self.repository_id = repository_id
+        host = config.get("redis.host")
+        port = config.get("redis.port")
+        db = config.get("redis.db")
+        password = config.get("redis.password")
+        self.redis = redis.Redis(host=host, port=port, db=db, password=password)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.redis.close()
+
+    def get_cc_commits(self):
+        return frozenset(self.redis.hkeys(self.repository_id))
+
+    def retrieve_cc_data(self, commit_id):
+        return self.redis.hget(self.repository_id, commit_id)
+
+    def persist(self, commit_id, data):
+        self.redis.hset(self.repository_id, commit_id, data)
+        self.redis.hset(
+            "{}:time".format(self.repository_id), commit_id, str(datetime.now())
+        )
 
 
 def determine_parent_commit(db_commits, iter_callable):
