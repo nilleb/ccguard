@@ -2,6 +2,7 @@
 
 import io
 import argparse
+import json
 import logging
 import shlex
 import subprocess
@@ -12,7 +13,27 @@ from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 
 
 HOME = Path.home()
-DBNAME = HOME.joinpath(".ccguard.db")
+DB_FILE_NAME = ".ccguard.db"
+CONFIG_FILE_NAME = ".ccguard.config"
+
+DEFAULT_CONFIGURATION = {
+    "sqlite.dbpath": HOME.joinpath(DB_FILE_NAME),
+}
+
+
+def configuration(repository_path="."):
+    user_config = HOME.joinpath(CONFIG_FILE_NAME)
+    repository_config = Path(repository_path).joinpath(CONFIG_FILE_NAME)
+
+    paths = [user_config, repository_config]
+    config = dict(DEFAULT_CONFIGURATION)
+    for path in paths:
+        try:
+            with open(path) as config_fd:
+                config.update(json.load(config_fd))
+        except FileNotFoundError:
+            pass
+    return config
 
 
 def get_output(command, working_folder=None):
@@ -77,9 +98,10 @@ class GitAdapter(object):
 
 
 class SqliteAdapter(object):
-    def __init__(self, repository_id, dbname=DBNAME):
+    def __init__(self, repository_id, config):
+        dbpath = config.get("sqlite.dbpath")
         self.repository_id = repository_id
-        self.conn = sqlite3.connect(dbname)
+        self.conn = sqlite3.connect(dbpath)
         self._create_table()
 
     def __enter__(self):
@@ -190,7 +212,9 @@ def main():
     diff = None
     challenger = Cobertura(args.report, source=args.repository)
 
-    with SqliteAdapter(repository_id) as adapter:
+    config = configuration(args.repository)
+
+    with SqliteAdapter(repository_id, config) as adapter:
         reference_commits = adapter.get_cc_commits()
         logging.debug("Found the following reference commits: %r", reference_commits)
 

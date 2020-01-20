@@ -39,12 +39,6 @@ def test_get_files():
         assert "\n" not in val
 
 
-def sample_sqladapter():
-    with ccguard.SqliteAdapter("test") as adapter:
-        commits = adapter.get_cc_commits()
-        print(commits)
-
-
 def test_persist():
     commit_id = "test"
     repo = MagicMock()
@@ -71,3 +65,30 @@ def test_parse():
     assert args.debug
     assert args.uncommitted
     assert args.report == "coverage.xml"
+
+
+def test_configuration():
+    config = ccguard.configuration()
+    assert config
+    dbpath = config.get("sqlite.dbpath")
+    config = ccguard.configuration("ccguard/test_data/configuration_override")
+    assert config
+    dbpath_override = config.get("sqlite.dbpath")
+    assert dbpath != dbpath_override
+
+
+def test_sqladapter():
+    config = ccguard.configuration("ccguard/test_data/configuration_override")
+    with ccguard.SqliteAdapter("test", config) as adapter:
+        commits = adapter.get_cc_commits()
+        adapter.persist("one", "<coverage>1</coverage>")
+        adapter.persist("two", "<coverage>2</coverage>")
+        adapter.persist("thr", "<coverage>3</coverage>")
+        commits = adapter.get_cc_commits()
+        assert len(commits) == 3
+        data = adapter.retrieve_cc_data("one")
+        assert "1" in data
+        data = adapter.retrieve_cc_data("two")
+        assert "2" in data
+        data = adapter.retrieve_cc_data("thr")
+        assert "3" in data
