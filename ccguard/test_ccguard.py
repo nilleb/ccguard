@@ -137,8 +137,18 @@ def test_redis_adapter():
 
 def test_adapter_factory():
     config = dict(ccguard.DEFAULT_CONFIGURATION)
-    adapter_class = ccguard.adapter_factory(config)
+    adapter_class = ccguard.adapter_factory(None, config)
     assert adapter_class is ccguard.SqliteAdapter
+    adapter_class = ccguard.adapter_factory("redis", config)
+    assert adapter_class is ccguard.RedisAdapter
+    config["adapter.class"] = "redis"
+    adapter_class = ccguard.adapter_factory(None, config)
+    assert adapter_class is ccguard.RedisAdapter
+    adapter_class = ccguard.adapter_factory("sqlite", config)
+    assert adapter_class is ccguard.SqliteAdapter
+    config["adapter.class"] = "sqlite"
+    adapter_class = ccguard.adapter_factory("redis", config)
+    assert adapter_class is ccguard.RedisAdapter
 
 
 def test_print_cc_report():

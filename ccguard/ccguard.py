@@ -240,14 +240,28 @@ def parse_args(args=None):
         help="whether to consider uncommitted changes. reference will not be persisted.",
         action="store_true",
     )
+    parser.add_argument(
+        "--adapter",
+        dest="adapter",
+        help="Choose the adapter to use (choices: sqlite or redis)",
+    )
 
     return parser.parse_args(args)
 
 
-def adapter_factory(config):
+def adapter_factory(adapter, config):
+    if adapter:
+        if adapter == "sqlite":
+            adapter_class = SqliteAdapter
+        if adapter == "redis":
+            adapter_class = RedisAdapter
+        if adapter_class:
+            return adapter_class
+
     adapter_class = (
         RedisAdapter if config.get("adapter.class", None) == "redis" else SqliteAdapter
     )
+
     return adapter_class
 
 
@@ -324,7 +338,7 @@ def main():
 
     config = configuration(args.repository)
 
-    with adapter_factory(config)(repository_id, config) as adapter:
+    with adapter_factory(args.adapter, config)(repository_id, config) as adapter:
         reference_commits = adapter.get_cc_commits()
         logging.debug("Found the following reference commits: %r", reference_commits)
 
