@@ -92,6 +92,11 @@ def adapter_scenario(adapter):
     assert "2" in data
     data = adapter.retrieve_cc_data("thr")
     assert "3" in data
+    data = adapter.dump()
+    assert len(data) == 3
+    for commit_id, reference in data:
+        assert isinstance(commit_id, str)
+        assert "<coverage>" in reference
 
 
 def test_sqladapter():
@@ -111,11 +116,13 @@ def setup_redis_mock():
 
     hkeys = lambda a: data.get(a, {}).keys()
     get_data = lambda a, b: data.get(a, {}).get(b)
+    dump = lambda a: data.get(a, {}).items()
 
     redis_client = MagicMock()
     redis_client.hkeys = MagicMock(side_effect=hkeys)
     redis_client.hset = MagicMock(side_effect=set_data)
     redis_client.hget = MagicMock(side_effect=get_data)
+    redis_client.hgetall = MagicMock(side_effect=dump)
 
     return redis_client
 

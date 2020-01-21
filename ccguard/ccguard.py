@@ -143,6 +143,13 @@ class SqliteAdapter(object):
         except sqlite3.IntegrityError:
             logging.debug("This commit seems to have already been recorded.")
 
+    def dump(self):
+        query = """SELECT commit_id, coverage_data
+        FROM timestamped_coverage_{repository_id}""".format(
+            repository_id=self.repository_id
+        )
+        return self.conn.execute(query).fetchall()
+
     def _create_table(self):
         ddl = """CREATE TABLE IF NOT EXISTS `timestamped_coverage_{repository_id}` (
     `commit_id` varchar(40) NOT NULL,
@@ -180,6 +187,9 @@ class RedisAdapter(object):
         self.redis.hset(
             "{}:time".format(self.repository_id), commit_id, str(datetime.now())
         )
+
+    def dump(self):
+        return self.redis.hgetall(self.repository_id)
 
 
 def determine_parent_commit(db_commits, iter_callable):
