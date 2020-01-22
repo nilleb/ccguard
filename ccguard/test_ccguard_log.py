@@ -43,3 +43,18 @@ def test_detailed_references():
 
 def test_list_references():
     ccguard_log.list_references()
+
+
+def test_parse_no_args():
+    args = ccguard_log.parse_args([])
+    assert args.repository == "."
+
+
+def test_parse_optionals():
+    args = ccguard_log.parse_args(["--repository", "test"])
+    assert args.repository == "test"
+
+
+def test_parse_shortest():
+    args = ccguard_log.parse_args(["--adapter", "sqlite",])
+    assert args.adapter == "sqlite"

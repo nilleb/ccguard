@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import git
+import argparse
 import ccguard
 import logging
 from xml.etree import ElementTree
@@ -72,6 +73,28 @@ def detailed_references(repo_folder=".", adapter_class=ccguard.SqliteAdapter):
     return [enrich_commit(repo.commit(logEntry)) for logEntry in repo.iter_commits()]
 
 
+def parse_args(args=None):
+    parser = argparse.ArgumentParser(description="Display ccguard reference log.")
+
+    parser.add_argument(
+        "--adapter-class",
+        help="Choose the adapter to use (choices: sqlite or redis)",
+        dest="adapter",
+    )
+    parser.add_argument(
+        "--repository", dest="repository", help="the repository to analyze", default="."
+    )
+
+    return parser.parse_args(args)
+
+
 if __name__ == "__main__":
-    for ac in detailed_references():
+    args = parse_args()
+
+    config = ccguard.configuration(args.repository)
+    adapter_class = ccguard.adapter_factory(args.adapter, config)
+
+    for ac in detailed_references(
+        repo_folder=args.repository, adapter_class=adapter_class
+    ):
         print(ac)

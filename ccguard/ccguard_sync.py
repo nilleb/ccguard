@@ -52,9 +52,7 @@ def parse_args(args=None):
         "--commit_id", dest="commit_id", help="Limit the transfer to this commit only",
     )
 
-    parsed = parser.parse_args(args)
-
-    return parsed
+    return parser.parse_args(args)
 
 
 def main(args=None):

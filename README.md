@@ -6,6 +6,7 @@ ccguard compares the current code coverage to past code coverage. ccguard fails 
 
 ![alt text](static/success.png "ccguard.py in action")
 ![alt text](static/failure.png "so bad, a regression")
+![alt text](static/log.png "cc is increasing!")
 
 ## requires
 
@@ -52,6 +53,12 @@ ccguard.py --html --consider-uncommitted-changes coverage.xml --repository src/
 ```
 
 please see [how to produce code coverage data](docs/how to produce code coverage data.md) to know how to produce code coverage data in your favourite language.
+
+## display code coverage trends
+
+```sh
+python ccguard/ccguard_log.py
+```
 
 ## credits
 
