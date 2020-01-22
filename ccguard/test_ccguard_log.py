@@ -20,7 +20,7 @@ def mock_adapter_class(commit_id):
     return MockAdapter
 
 
-def test_detailed_references():
+def fake_commit():
     mit = git.Commit(
         repo=MagicMock(), binsha=bytes("a" * 20, "utf-8"), message="message(aaa)"
     )
@@ -28,6 +28,11 @@ def test_detailed_references():
     mock.iter_commits = MagicMock(side_effect=lambda: [mit])
     mock.commit = MagicMock(return_value=mit)
     git.Repo = MagicMock(return_value=mock)
+    return mit
+
+
+def test_detailed_references():
+    mit = fake_commit()
 
     refs = ccguard_log.detailed_references(adapter_class=mock_adapter_class(mit.hexsha))
     for ref in refs:
