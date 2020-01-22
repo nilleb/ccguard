@@ -272,7 +272,7 @@ def iter_callable(git, ref):
     return call
 
 
-def print_cc_report(challenger, html_too=False, log_function=print):
+def print_cc_report(challenger: Cobertura, html_too=False, log_function=print):
     if len(challenger.files()) > 5:
         log_function("Filename      Stmts    Miss  Cover")
         log_function("----------  -------  ------  -------")
@@ -294,8 +294,44 @@ def print_cc_report(challenger, html_too=False, log_function=print):
             ccfile.write(report.generate())
 
 
-def print_diff_message(diff, log_function=print):
+def has_better_coverage(diff: CoberturaDiff) -> bool:
     if diff.has_better_coverage():
+        return True
+
+    challenger_files = set(diff.cobertura2.files())
+    reference_files = set(diff.cobertura1.files())
+    reference_rate = diff.cobertura1.line_rate()
+    ret = True
+
+    # new files should have a line rate at least equal to the reference line rate
+    for fi in challenger_files.difference(reference_files):
+        if diff.cobertura2.line_rate(fi) < reference_rate:
+            logging.warning(
+                "File %s has a line rate (%.2f) inferior than "
+                "the reference line rate (%.2f)",
+                fi,
+                diff.cobertura2.line_rate(fi),
+                reference_rate,
+            )
+            ret = False
+
+    # existing files shoudl have a line rate at least equal to their past line rate
+    for fi in challenger_files.intersection(reference_files):
+        if diff.cobertura2.line_rate(fi) < diff.cobertura1.line_rate(fi):
+            logging.warning(
+                "File %s has a line rate (%.2f) inferior than "
+                "its past line rate (%.2f)",
+                fi,
+                diff.cobertura2.line_rate(fi),
+                diff.cobertura1.line_rate(fi),
+            )
+            ret = False
+
+    return ret
+
+
+def print_diff_message(diff: CoberturaDiff, log_function=print):
+    if has_better_coverage(diff):
         log_function(
             "✨ 🍰 ✨  Congratulations! "
             "You have improved the code coverage (or kept it stable)."
@@ -370,7 +406,7 @@ def main():
         print_diff_message(diff)
         print_delta_report(reference, challenger, args.html)
 
-    if diff and not diff.has_better_coverage():
+    if diff and not has_better_coverage(diff):
         exit(255)
 
 

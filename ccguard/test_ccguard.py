@@ -1,7 +1,7 @@
 import ccguard
 import redis
 from unittest.mock import MagicMock
-from pycobertura import Cobertura
+from pycobertura import Cobertura, CoberturaDiff
 
 
 def test_get_repository_id():
@@ -166,3 +166,30 @@ def test_iter_callable():
     ccguard.iter_callable(mock, ref)()
     assert ref in refs
     assert len(refs) == 1
+
+
+def test_has_better_coverage_failure():
+    ref = Cobertura("ccguard/test_data/has_better_coverage/reference-code-coverage.xml")
+    cha = Cobertura(
+        "ccguard/test_data/has_better_coverage/failing-new-code-coverage.xml"
+    )
+    diff = CoberturaDiff(ref, cha)
+    assert not ccguard.has_better_coverage(diff)
+
+
+def test_has_better_coverage_success():
+    ref = Cobertura("ccguard/test_data/has_better_coverage/reference-code-coverage.xml")
+    cha = Cobertura(
+        "ccguard/test_data/has_better_coverage/successful-new-code-coverage.xml"
+    )
+    diff = CoberturaDiff(ref, cha)
+    assert ccguard.has_better_coverage(diff)
+
+
+def test_has_better_coverage_new_file_failure():
+    ref = Cobertura("ccguard/test_data/has_better_coverage/reference-code-coverage.xml")
+    cha = Cobertura(
+        "ccguard/test_data/has_better_coverage/new-file-new-code-coverage-fail.xml"
+    )
+    diff = CoberturaDiff(ref, cha)
+    assert not ccguard.has_better_coverage(diff)
