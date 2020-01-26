@@ -7,9 +7,7 @@ import logging
 import shlex
 import subprocess
 import sqlite3
-from datetime import datetime
 from pathlib import Path
-import redis
 from pycobertura import Cobertura, CoberturaDiff, TextReporterDelta, TextReporter
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 
@@ -103,20 +101,41 @@ class GitAdapter(object):
         # https://ideas.circleci.com/ideas/CCI-I-894
 
 
-class SqliteAdapter(object):
+class ReferenceAdapter(object):
     def __init__(self, repository_id, config):
-        dbpath = config.get("sqlite.dbpath")
+        self.config = config
         self.repository_id = repository_id
-        self.conn = sqlite3.connect(dbpath)
-        self._create_table()
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def get_cc_commits(self) -> frozenset:
+        raise NotImplementedError()
+
+    def retrieve_cc_data(self, commit_id: str) -> bytes:
+        raise NotImplementedError()
+
+    def persist(self, commit_id: str, data: bytes):
+        raise NotImplementedError()
+
+    def dump(self) -> list:
+        raise NotImplementedError()
+
+
+class SqliteAdapter(ReferenceAdapter):
+    def __init__(self, repository_id, config):
+        super().__init__(repository_id, config)
+        dbpath = config.get("sqlite.dbpath")
+        self.conn = sqlite3.connect(dbpath)
+        self._create_table()
+
+    def __exit__(self, exc_type, exc_value, traceback):
         self.conn.close()
 
-    def get_cc_commits(self):
+    def get_cc_commits(self) -> frozenset:
         commits_query = "SELECT commit_id FROM timestamped_coverage_{repository_id}".format(
             repository_id=self.repository_id
         )
@@ -124,14 +143,14 @@ class SqliteAdapter(object):
             c for ct in self.conn.execute(commits_query).fetchall() for c in ct
         )
 
-    def retrieve_cc_data(self, commit_id):
+    def retrieve_cc_data(self, commit_id: str) -> bytes:
         query = 'SELECT coverage_data FROM timestamped_coverage_{repository_id}\
                 WHERE commit_id="{commit_id}"'.format(
             repository_id=self.repository_id, commit_id=commit_id
         )
         return self.conn.execute(query).fetchone()[0]
 
-    def persist(self, commit_id, data):
+    def persist(self, commit_id: str, data: bytes):
         query = """INSERT INTO timestamped_coverage_{repository_id}
         (commit_id, coverage_data) VALUES (?, ?)""".format(
             repository_id=self.repository_id
@@ -161,45 +180,16 @@ class SqliteAdapter(object):
         self.conn.execute(statement)
 
 
-class RedisAdapter(object):
-    def __init__(self, repository_id, config={}):
-        self.repository_id = repository_id
-        host = config.get("redis.host")
-        port = config.get("redis.port")
-        db = config.get("redis.db")
-        password = config.get("redis.password")
-        self.redis = redis.Redis(host=host, port=port, db=db, password=password)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.redis.close()
-
-    def get_cc_commits(self):
-        return frozenset(self.redis.hkeys(self.repository_id))
-
-    def retrieve_cc_data(self, commit_id):
-        return self.redis.hget(self.repository_id, commit_id)
-
-    def persist(self, commit_id, data):
-        self.redis.hset(self.repository_id, commit_id, data)
-        self.redis.hset(
-            "{}:time".format(self.repository_id), commit_id, str(datetime.now())
-        )
-
-    def dump(self):
-        return self.redis.hgetall(self.repository_id)
-
-
-def determine_parent_commit(db_commits, iter_callable):
+def determine_parent_commit(db_commits: list, iter_callable: callable) -> str:
     for commits_chunk in iter_callable():
         for commit in commits_chunk:
             if commit in db_commits:
                 return commit
 
 
-def persist(repo_adapter, reference_adapter, report_file):
+def persist(
+    repo_adapter: GitAdapter, reference_adapter: SqliteAdapter, report_file: str
+):
     with open(report_file) as fd:
         data = fd.read()
         current_commit = repo_adapter.get_current_commit_id()
@@ -254,13 +244,18 @@ def adapter_factory(adapter, config):
         if adapter == "sqlite":
             adapter_class = SqliteAdapter
         if adapter == "redis":
+            from redis_adapter import RedisAdapter
+
             adapter_class = RedisAdapter
         if adapter_class:
             return adapter_class
 
-    adapter_class = (
-        RedisAdapter if config.get("adapter.class", None) == "redis" else SqliteAdapter
-    )
+    if config.get("adapter.class", None) == "redis":
+        from redis_adapter import RedisAdapter
+
+        adapter_class = RedisAdapter
+    else:
+        adapter_class = SqliteAdapter
 
     return adapter_class
 

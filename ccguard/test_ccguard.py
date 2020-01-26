@@ -1,5 +1,6 @@
 import ccguard
 import redis
+import redis_adapter
 from unittest.mock import MagicMock
 from pycobertura import Cobertura, CoberturaDiff
 
@@ -131,7 +132,7 @@ def test_redis_adapter():
     redis.Redis = MagicMock(return_value=setup_redis_mock())
 
     config = ccguard.configuration("ccguard/test_data/configuration_override")
-    with ccguard.RedisAdapter("test", config) as adapter:
+    with redis_adapter.RedisAdapter("test", config) as adapter:
         adapter_scenario(adapter)
 
 
@@ -140,15 +141,15 @@ def test_adapter_factory():
     adapter_class = ccguard.adapter_factory(None, config)
     assert adapter_class is ccguard.SqliteAdapter
     adapter_class = ccguard.adapter_factory("redis", config)
-    assert adapter_class is ccguard.RedisAdapter
+    assert adapter_class is redis_adapter.RedisAdapter
     config["adapter.class"] = "redis"
     adapter_class = ccguard.adapter_factory(None, config)
-    assert adapter_class is ccguard.RedisAdapter
+    assert adapter_class is redis_adapter.RedisAdapter
     adapter_class = ccguard.adapter_factory("sqlite", config)
     assert adapter_class is ccguard.SqliteAdapter
     config["adapter.class"] = "sqlite"
     adapter_class = ccguard.adapter_factory("redis", config)
-    assert adapter_class is ccguard.RedisAdapter
+    assert adapter_class is redis_adapter.RedisAdapter
 
 
 def test_print_cc_report():

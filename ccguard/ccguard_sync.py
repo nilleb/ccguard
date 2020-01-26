@@ -1,4 +1,5 @@
 import ccguard
+import redis_adapter
 import argparse
 
 
@@ -6,7 +7,7 @@ def transfer(
     commit_id,
     repo_folder=".",
     source_adapter_class=ccguard.SqliteAdapter,
-    dest_adapter_class=ccguard.RedisAdapter,
+    dest_adapter_class=redis_adapter.RedisAdapter,
 ):
     inner_callable = prepare_inner_callable(commit_id)
     config = ccguard.configuration(repo_folder)
