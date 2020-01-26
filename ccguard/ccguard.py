@@ -188,7 +188,7 @@ def determine_parent_commit(db_commits: list, iter_callable: callable) -> str:
 
 
 def persist(
-    repo_adapter: GitAdapter, reference_adapter: SqliteAdapter, report_file: str
+    repo_adapter: GitAdapter, reference_adapter: ReferenceAdapter, report_file: str
 ):
     with open(report_file) as fd:
         data = fd.read()
@@ -380,7 +380,7 @@ def main():
         commit_id = determine_parent_commit(reference_commits, iter_callable(git, ref))
 
         if commit_id:
-            logging.info("Retrieving data for refrence commit %s.", commit_id)
+            logging.info("Retrieving data for reference commit %s.", commit_id)
             cc_reference_data = adapter.retrieve_cc_data(commit_id)
             logging.debug("Reference data: %r", cc_reference_data)
             reference_fd = io.StringIO(cc_reference_data)
