@@ -16,7 +16,6 @@ def dump(repo_folder=".", adapter_class=ccguard.SqliteAdapter):
 def list_references(repo_folder=".", adapter_class=ccguard.SqliteAdapter):
     config = ccguard.configuration()
     repo_id = ccguard.GitAdapter(repo_folder).get_repository_id()
-    commits = []
     with adapter_class(repo_id, config) as adapter:
         return adapter.get_cc_commits()
 

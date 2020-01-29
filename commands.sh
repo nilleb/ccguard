@@ -22,3 +22,12 @@ python3 setup.py bdist_wheel
 
 # to install this package locally
 python3 -m pip install dist/*.whl
+
+# are there uncommitted changes
+git status --porcelain --untracked-files=no
+
+# uninstall ccguard from the venv
+pip uninstall ccguard
+
+# list staged files only
+git diff --name-only --cached
