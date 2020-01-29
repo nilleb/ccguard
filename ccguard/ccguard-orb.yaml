@@ -1,0 +1,38 @@
+# This code is licensed from CircleCI to the user under the MIT license. See
+# https://circleci.com/orbs/registry/licensing for details.
+version: 2.1
+
+description: Upload your coverage reports to ccguard server.
+
+commands:
+  upload:
+    parameters:
+      ccguard_server_address:
+        description: Address of the ccguard server.
+        type: string
+        default: "http://127.0.0.1:5000/"
+      repository_folder:
+        description: Path to the git repository folder.
+        type: string
+        default: "."
+      file:
+        description: Path to the code coverage data file to upload.
+        type: string
+        default: ""
+      when:
+        description: When should this step run?
+        type: string
+        default: "always"
+    steps:
+      - when:
+          condition: << parameters.file >>
+          steps:
+            - run:
+                name: Upload Coverage Results
+                command: |
+                    pushd ${repository_folder}
+                    commit_id = $(git rev-parse HEAD)
+                    repository_id = $(git rev-list --max-parents=0 HEAD)
+                    popd
+                    curl -X PUT ${ccguard_server_address}/api/v1/references/${repository_id}/${commit_id} -T ${file}
+                when: << parameters.when >>
