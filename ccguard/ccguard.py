@@ -14,13 +14,15 @@ from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 
 HOME = Path.home()
 DB_FILE_NAME = ".ccguard.db"
-CONFIG_FILE_NAME = ".ccguard.config"
+CONFIG_FILE_NAME = ".ccguard.config.json"
 
 DEFAULT_CONFIGURATION = {
     "redis.host": "localhost",
     "redis.port": 6379,
     "redis.db": 0,
     "redis.password": None,
+    "threshold.tolerance": 0,
+    "threshold.hard-minimum": -1,
     "sqlite.dbpath": HOME.joinpath(DB_FILE_NAME),
 }
 
@@ -32,10 +34,12 @@ def configuration(repository_path="."):
     paths = [user_config, repository_config]
     config = dict(DEFAULT_CONFIGURATION)
     for path in paths:
+        logging.debug("Considering %s as configuration file", path)
         try:
             with open(path) as config_fd:
                 config.update(json.load(config_fd))
         except FileNotFoundError:
+            logging.debug("File %s has not been found", path)
             pass
     return config
 
@@ -81,7 +85,7 @@ class GitAdapter(object):
             logging.debug("Returning as previous revisions: %r", commits)
             yield commits
 
-    def get_files(self,):
+    def get_files(self):
         command = "git rev-parse --show-toplevel"
         root_folder = get_output(
             command, working_folder=self.repository_folder
@@ -95,10 +99,13 @@ class GitAdapter(object):
 
     def get_common_ancestor(self, base_branch="master", ref="HEAD"):
         command = "git merge-base {} {}".format(base_branch, ref)
-        output = get_output(command, working_folder=self.repository_folder).rstrip()
-        return output
+        return get_output(command, working_folder=self.repository_folder).rstrip()
         # at the moment, CircleCI does not provide the name of the base|target branch
         # https://ideas.circleci.com/ideas/CCI-I-894
+
+    def get_root_path(self):
+        command = "git rev-parse --show-toplevel"
+        return get_output(command, working_folder=self.repository_folder).rstrip()
 
 
 class ReferenceAdapter(object):
@@ -180,7 +187,7 @@ class SqliteAdapter(ReferenceAdapter):
         self.conn.execute(statement)
 
 
-def determine_parent_commit(db_commits: list, iter_callable: callable) -> str:
+def determine_parent_commit(db_commits: frozenset, iter_callable: callable) -> str:
     for commits_chunk in iter_callable():
         for commit in commits_chunk:
             if commit in db_commits:
@@ -235,6 +242,19 @@ def parse_args(args=None):
         dest="adapter",
         help="Choose the adapter to use (choices: sqlite or redis)",
     )
+    parser.add_argument(
+        "--tolerance",
+        type=int,
+        dest="tolerance",
+        help="Define a tolerance (percentage).",
+    )
+
+    parser.add_argument(
+        "--hard-minimum",
+        type=int,
+        dest="hard_minimum",
+        help="Define a hard miniùum threshold (percentage).",
+    )
 
     return parser.parse_args(args)
 
@@ -267,7 +287,7 @@ def iter_callable(git, ref):
     return call
 
 
-def print_cc_report(challenger: Cobertura, html_too=False, log_function=print):
+def print_cc_report(challenger: Cobertura, report_file=None, log_function=print):
     if len(challenger.files()) > 5:
         log_function("Filename      Stmts    Miss  Cover")
         log_function("----------  -------  ------  -------")
@@ -283,13 +303,13 @@ def print_cc_report(challenger: Cobertura, html_too=False, log_function=print):
     else:
         log_function("{}{}".format(TextReporter(challenger).generate(), "\n"))
 
-    if html_too:
+    if report_file and report_file.endswith("html"):
         report = HtmlReporter(challenger)
-        with open("cc.html", "w") as ccfile:
+        with open(report_file, "w") as ccfile:
             ccfile.write(report.generate())
 
 
-def has_better_coverage(diff: CoberturaDiff) -> bool:
+def has_better_coverage(diff: CoberturaDiff, tolerance=0, hard_minimum=-1) -> bool:
     if diff.has_better_coverage():
         return True
 
@@ -298,35 +318,60 @@ def has_better_coverage(diff: CoberturaDiff) -> bool:
     reference_rate = diff.cobertura1.line_rate()
     ret = True
 
-    # new files should have a line rate at least equal to the reference line rate
+    # new files should have a line rate at least equal to the reference line rate..
+    # ..minus the tolerance..
+    # ..but always greater than the hard minimum, if any
     for fi in challenger_files.difference(reference_files):
-        if diff.cobertura2.line_rate(fi) < reference_rate:
+        if diff.cobertura2.line_rate(fi) < reference_rate - tolerance:
+            message = (
+                "File {} has a line rate ({:.2f}) "
+                "inferior than the reference line rate ({:.2f})"
+            ).format(fi, diff.cobertura2.line_rate(fi), reference_rate)
+            if tolerance:
+                message += "minus the tolerance ({:.2f})".format(tolerance)
+            logging.warning(message)
+            ret = False
+        if hard_minimum >= 0 and diff.cobertura2.line_rate(fi) < hard_minimum:
             logging.warning(
                 "File %s has a line rate (%.2f) inferior than "
-                "the reference line rate (%.2f)",
+                "the hard minimum (%.2f)",
                 fi,
                 diff.cobertura2.line_rate(fi),
-                reference_rate,
+                hard_minimum,
             )
             ret = False
 
-    # existing files shoudl have a line rate at least equal to their past line rate
+    # existing files shoudl have a line rate at least equal to their past line rate..
+    # ..minus the tolerance..
+    # ..but always greater than the hard minimum, if any
     for fi in challenger_files.intersection(reference_files):
-        if diff.cobertura2.line_rate(fi) < diff.cobertura1.line_rate(fi):
+        if diff.cobertura2.line_rate(fi) < diff.cobertura1.line_rate(fi) - tolerance:
+            message = (
+                "File {} has a line rate ({:.2f}) "
+                "inferior than its past line rate ({:.2f})"
+            ).format(fi, diff.cobertura2.line_rate(fi), diff.cobertura1.line_rate(fi))
+            if tolerance:
+                message += "minus the tolerance ({:.2f})".format(tolerance)
+
+            logging.warning(message)
+            ret = False
+        if hard_minimum >= 0 and diff.cobertura2.line_rate(fi) < hard_minimum:
             logging.warning(
                 "File %s has a line rate (%.2f) inferior than "
-                "its past line rate (%.2f)",
+                "the hard minimum (%.2f)",
                 fi,
                 diff.cobertura2.line_rate(fi),
-                diff.cobertura1.line_rate(fi),
+                hard_minimum,
             )
             ret = False
 
     return ret
 
 
-def print_diff_message(diff: CoberturaDiff, log_function=print):
-    if has_better_coverage(diff):
+def print_diff_message(
+    diff: CoberturaDiff, log_function=print, has_coverage_improved=False
+):
+    if has_coverage_improved:
         log_function(
             "✨ 🍰 ✨  Congratulations! "
             "You have improved the code coverage (or kept it stable)."
@@ -345,13 +390,13 @@ def print_diff_message(diff: CoberturaDiff, log_function=print):
         )
 
 
-def print_delta_report(reference, challenger, html_too=False, log_function=print):
+def print_delta_report(reference, challenger, log_function=print, report_file=None):
     delta = TextReporterDelta(reference, challenger)
     log_function(delta.generate())
 
-    if html_too:
+    if report_file and report_file.endswith(".html"):
         delta = HtmlReporterDelta(reference, challenger)
-        with open("diff.html", "w") as diff_file:
+        with open(report_file, "w") as diff_file:
             diff_file.write(delta.generate())
 
 
@@ -390,19 +435,28 @@ def main():
             logging.warning("No reference code coverage data found.")
 
         if challenger:
-            print_cc_report(challenger, args.html)
+            print_cc_report(challenger, report_file="cc.html" if args.html else None)
 
             if not args.uncommitted:
                 persist(git, adapter, args.report)
         else:
             logging.error("No recent code coverage data found.")
 
-    if diff:
-        print_diff_message(diff)
-        print_delta_report(reference, challenger, args.html)
+    tolerance = args.tolerance or config.get("threshold.tolerance", 0)
+    hard_minimum = args.hard_minimum or config.get("threshold.hard-minimum", -1)
+    hard_minimum = hard_minimum * 1.0 / 100
 
-    if diff and not has_better_coverage(diff):
-        exit(255)
+    if diff:
+        has_coverage_improved = has_better_coverage(
+            diff, tolerance=tolerance, hard_minimum=hard_minimum
+        )
+        print_diff_message(diff, has_coverage_improved=has_coverage_improved)
+        print_delta_report(
+            reference, challenger, report_file="diff.html" if args.html else None
+        )
+
+        if not has_coverage_improved:
+            exit(255)
 
 
 if __name__ == "__main__":

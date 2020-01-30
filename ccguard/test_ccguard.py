@@ -1,3 +1,4 @@
+import os
 import ccguard
 import redis
 import redis_adapter
@@ -159,6 +160,29 @@ def test_print_cc_report():
     ccguard.print_cc_report(report, log_function=log_function)
 
 
+def test_print_cc_report_longer():
+    report = Cobertura("ccguard/test_data/sample_coverage_longer.xml")
+    output = []
+    log_function = lambda a: output.append(a)
+    ccguard.print_cc_report(report, log_function=log_function)
+    assert "..details omissed.." in output
+
+
+def test_print_delta_report():
+    reference = Cobertura(
+        "ccguard/test_data/sample_coverage.xml",
+        source=ccguard.GitAdapter().get_root_path() + "/ccguard",
+    )
+    challenger = Cobertura(
+        "ccguard/test_data/sample_coverage_longer.xml",
+        source=ccguard.GitAdapter().get_root_path() + "/ccguard",
+    )
+    output = []
+    log_function = lambda a: output.append(a)
+    ccguard.print_delta_report(reference, challenger, log_function=log_function)
+    assert output
+
+
 def test_iter_callable():
     mock = MagicMock()
     ref = "test"
@@ -194,3 +218,17 @@ def test_has_better_coverage_new_file_failure():
     )
     diff = CoberturaDiff(ref, cha)
     assert not ccguard.has_better_coverage(diff)
+
+
+def test_determine_parent_commit():
+    def iter_callable():
+        yield [1, 2, 3]
+        yield [4, 5, 6]
+        raise Exception("we should never get here")
+
+    assert 4 == ccguard.determine_parent_commit(frozenset([4, 7]), iter_callable)
+
+
+def test_get_root_path():
+    current_folder = os.path.dirname(__file__)
+    assert current_folder.startswith(ccguard.GitAdapter(".").get_root_path())
