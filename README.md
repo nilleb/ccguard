@@ -50,6 +50,10 @@ ccguard.py --html --consider-uncommitted-changes coverage.xml
 # if needed to display the line coverage for each file in the HTML report,
 # fine tune the source files path with the --repository argument
 ccguard.py --html --consider-uncommitted-changes coverage.xml --repository src/
+# allow regressions up to 3%
+ccguard.py coverage.xml --tolerance 3
+# allow regressions up to 10%, but never descend below 70%
+ccguard.py coverage.xml --tolerance 10 --hard-minimum 70
 ```
 
 please see [how to produce code coverage data](docs/how to produce code coverage data.md) to know how to produce code coverage data in your favourite language.
@@ -58,6 +62,25 @@ please see [how to produce code coverage data](docs/how to produce code coverage
 
 ```sh
 python ccguard/ccguard_log.py
+```
+
+## synchronize repositories
+
+```sh
+# upload the report to a distant redis repository
+python ccguard/ccguard_sync.py sqlite redis
+# download the report from a distant redis repository
+python ccguard/ccguard_sync.py redis sqlite
+# limit to a single repository
+python ccguard/ccguard_sync.py redis sqlite --repository_id abcd
+# limit to a single repository and a single commit
+python ccguard/ccguard_sync.py redis sqlite --repository_id abcd --commit_id ef12
+```
+
+## launch a local server
+
+```sh
+python ccguard/ccguard_server.py
 ```
 
 ## credits
