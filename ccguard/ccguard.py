@@ -7,6 +7,7 @@ import logging
 import shlex
 import subprocess
 import sqlite3
+import lxml.etree as ET
 from pathlib import Path
 from pycobertura import Cobertura, CoberturaDiff, TextReporterDelta, TextReporter
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
@@ -400,6 +401,19 @@ def print_delta_report(reference, challenger, log_function=print, report_file=No
             diff_file.write(delta.generate())
 
 
+def detect_source(report, repository_path="."):
+    if repository_path != ".":
+        return repository_path
+
+    xml = ET.parse(report).getroot()
+    paths = xml.xpath("/coverage/sources/source/text()")
+    logging.debug("detected as paths:")
+    for path in paths:
+        logging.debug("- %s", path)
+
+    return next(iter(paths))
+
+
 def main():
     args = parse_args()
 
@@ -409,8 +423,10 @@ def main():
     git = GitAdapter(args.repository)
     repository_id = git.get_repository_id()
 
+    source = detect_source(args.report, args.repository)
+
     diff, reference = None, None
-    challenger = Cobertura(args.report, source=args.repository)
+    challenger = Cobertura(args.report, source=source)
 
     config = configuration(args.repository)
 
@@ -429,7 +445,7 @@ def main():
             cc_reference_data = adapter.retrieve_cc_data(commit_id)
             logging.debug("Reference data: %r", cc_reference_data)
             reference_fd = io.StringIO(cc_reference_data)
-            reference = Cobertura(reference_fd, source=args.repository)
+            reference = Cobertura(reference_fd, source=source)
             diff = CoberturaDiff(reference, challenger)
         else:
             logging.warning("No reference code coverage data found.")
