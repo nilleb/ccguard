@@ -1,5 +1,5 @@
 import git
-import ccguard_log
+from . import ccguard_log
 from unittest.mock import MagicMock
 
 

@@ -1,7 +1,7 @@
 import os
-import ccguard
+from . import ccguard
 import redis
-import redis_adapter
+from . import redis_adapter
 from unittest.mock import MagicMock
 from pycobertura import Cobertura, CoberturaDiff
 

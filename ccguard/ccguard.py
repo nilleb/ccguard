@@ -265,11 +265,11 @@ def adapter_factory(adapter, config):
         if adapter == "sqlite":
             adapter_class = SqliteAdapter
         if adapter == "redis":
-            from redis_adapter import RedisAdapter
+            from ccguard.redis_adapter import RedisAdapter
 
             adapter_class = RedisAdapter
         if adapter == "web":
-            from web_adapter import WebAdapter
+            from ccguard.web_adapter import WebAdapter
 
             adapter_class = WebAdapter
 
@@ -277,11 +277,11 @@ def adapter_factory(adapter, config):
             return adapter_class
 
     if config.get("adapter.class", None) == "redis":
-        from redis_adapter import RedisAdapter
+        from ccguard.redis_adapter import RedisAdapter
 
         adapter_class = RedisAdapter
     elif config.get("adapter.class", None) == "web":
-        from web_adapter import WebAdapter
+        from ccguard.web_adapter import WebAdapter
 
         adapter_class = WebAdapter
     else:

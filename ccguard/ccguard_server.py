@@ -2,9 +2,9 @@ import io
 import logging
 import flask
 from flask import request, jsonify
-from pycobertura import Cobertura, CoberturaDiff, TextReporterDelta, TextReporter
+from pycobertura import Cobertura
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
-import ccguard
+from ccguard import ccguard
 
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
@@ -12,8 +12,11 @@ app.config["DEBUG"] = True
 
 @app.route("/", methods=["GET"])
 def home():
-    return """<h1>CCGuard Server</h1>
-<p>A CCGuard prototype API for uploading reports, listing references and displaying reports.</p>"""
+    return (
+        "<h1>CCGuard Server</h1>"
+        "<p>A CCGuard prototype API for uploading reports, "
+        "listing references and displaying reports.</p>"
+    )
 
 
 @app.route("/api/v1/references/<string:repository_id>/all", methods=["GET"])
@@ -80,5 +83,9 @@ def api_generate_diff(repository_id, commit_id1, commit_id2):
         return delta.generate()
 
 
-if __name__ == "__main__":
+def main():
     app.run()
+
+
+if __name__ == "__main__":
+    main()

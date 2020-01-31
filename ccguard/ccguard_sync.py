@@ -1,5 +1,5 @@
-import ccguard
-import redis_adapter
+from ccguard import ccguard
+from ccguard import redis_adapter
 import argparse
 
 

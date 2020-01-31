@@ -5,22 +5,22 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ccguard",
-    version="0.2",
-    scripts=[
-        "ccguard/ccguard.py",
-        "ccguard/ccguard_log.py",
-        "ccguard/ccguard_sync.py",
-        "ccguard/ccguard_server.py",
-        "ccguard/redis_adapter.py",
-        "ccguard/web_adapter.py",
-    ],
+    version="0.2.1",
+    entry_points={
+        "console_scripts": [
+            "ccguard=ccguard.ccguard:main",
+            "ccguard_log=ccguard.ccguard_log:main",
+            "ccguard_sync=ccguard.ccguard_sync:main",
+            "ccguard_server=ccguard.ccguard_server:main",
+        ]
+    },
     author="Ivo Bellin Salarin",
     author_email="me@nilleb.com",
     description="Prevent code coverage regressions",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/nilleb/ccguard",
-    packages=setuptools.find_packages(),
+    packages=["ccguard"],
     install_requires=["pycobertura", "gitpython", "redis", "flask"],
     classifiers=[
         "Programming Language :: Python :: 3",

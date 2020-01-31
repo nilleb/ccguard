@@ -1,4 +1,4 @@
-import ccguard_server
+from . import ccguard_server
 from unittest.mock import MagicMock, patch
 
 

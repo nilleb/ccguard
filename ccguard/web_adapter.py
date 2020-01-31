@@ -1,5 +1,5 @@
 import requests
-from ccguard import ReferenceAdapter
+from ccguard.ccguard import ReferenceAdapter
 
 
 class WebAdapter(ReferenceAdapter):

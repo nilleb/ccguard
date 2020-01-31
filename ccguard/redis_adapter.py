@@ -1,6 +1,6 @@
 import redis
 
-from ccguard import ReferenceAdapter
+from ccguard.ccguard import ReferenceAdapter
 from datetime import datetime
 
 

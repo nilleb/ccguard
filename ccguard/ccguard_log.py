@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import git
 import argparse
-import ccguard
+from ccguard import ccguard
 import logging
 from xml.etree import ElementTree
 
@@ -87,7 +87,7 @@ def parse_args(args=None):
     return parser.parse_args(args)
 
 
-if __name__ == "__main__":
+def main():
     args = parse_args()
 
     config = ccguard.configuration(args.repository)
@@ -97,3 +97,7 @@ if __name__ == "__main__":
         repo_folder=args.repository, adapter_class=adapter_class
     ):
         print(ac)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,8 +1,8 @@
 import git
 from unittest.mock import MagicMock
 
-import ccguard
-import ccguard_sync
+from . import ccguard
+from . import ccguard_sync
 
 
 def mock_adapter_class(commit_id_):
