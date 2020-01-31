@@ -54,9 +54,12 @@ ccguard.py --html --consider-uncommitted-changes coverage.xml --repository src/
 ccguard.py coverage.xml --tolerance 3
 # allow regressions up to 10%, but never descend below 70%
 ccguard.py coverage.xml --tolerance 10 --hard-minimum 70
+# use the web adapter (ie. send the data to ccguard_server).
+# requires a ccguard.server.address setting in the config.
+ccguard.py coverage.xml --adapter web
 ```
 
-please see [how to produce code coverage data](docs/how to produce code coverage data.md) to know how to produce code coverage data in your favourite language.
+please see [how-to-produce-code-coverage-data](docs/how to produce code coverage data.md) to know how to produce code coverage data in your favourite language.
 
 ## display code coverage trends
 
@@ -84,6 +87,9 @@ python ccguard/ccguard_sync.py redis sqlite --repository_id abcd --commit_id ef1
 
 ## launch a local server
 
+ccguard server allows you to centralize the reports and the regression checks (useful for CI workflows)
+also serves coverage and diff reports.
+
 ```sh
 python ccguard/ccguard_server.py
 ```
@@ -91,4 +97,4 @@ python ccguard/ccguard_server.py
 ## credits
 
 - [Alexandre Conrad](https://pypi.org/user/aconrad/) for his wonderful pycobertura
-- all the beta testers for the precious feedback
+- all the beta testers for their precious feedback

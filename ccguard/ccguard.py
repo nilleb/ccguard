@@ -268,6 +268,11 @@ def adapter_factory(adapter, config):
             from redis_adapter import RedisAdapter
 
             adapter_class = RedisAdapter
+        if adapter == "web":
+            from web_adapter import WebAdapter
+
+            adapter_class = WebAdapter
+
         if adapter_class:
             return adapter_class
 
@@ -275,6 +280,10 @@ def adapter_factory(adapter, config):
         from redis_adapter import RedisAdapter
 
         adapter_class = RedisAdapter
+    elif config.get("adapter.class", None) == "web":
+        from web_adapter import WebAdapter
+
+        adapter_class = WebAdapter
     else:
         adapter_class = SqliteAdapter
 

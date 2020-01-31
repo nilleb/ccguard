@@ -28,7 +28,18 @@ def api_references_all(repository_id):
 
 
 @app.route(
-    "/api/v1/references/<string:repository_id>/<string:commit_id>", methods=["PUT"]
+    "/api/v1/references/<string:repository_id>/<string:commit_id>/data",
+    methods=["GET"],
+)
+def api_references_download_data(repository_id, commit_id):
+    config = ccguard.configuration(repository_id)
+    adapter_class = ccguard.adapter_factory(None, config)
+    with adapter_class(repository_id, config) as adapter:
+        return adapter.retrieve_cc_data(commit_id)
+
+
+@app.route(
+    "/api/v1/references/<string:repository_id>/<string:commit_id>/data", methods=["PUT"]
 )
 def api_upload_reference(repository_id, commit_id):
     config = ccguard.configuration()
@@ -40,8 +51,6 @@ def api_upload_reference(repository_id, commit_id):
 
 @app.route("/web/report/<string:repository_id>/<string:commit_id>", methods=["GET"])
 def api_generate_report(repository_id, commit_id):
-    print(repository_id)
-    print(commit_id)
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
