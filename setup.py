@@ -11,6 +11,8 @@ setuptools.setup(
         "ccguard/ccguard_log.py",
         "ccguard/ccguard_sync.py",
         "ccguard/ccguard_server.py",
+        "ccguard/redis_adapter.py",
+        "ccguard/web_adapter.py",
     ],
     author="Ivo Bellin Salarin",
     author_email="me@nilleb.com",
