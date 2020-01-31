@@ -60,11 +60,16 @@ please see [how to produce code coverage data](docs/how to produce code coverage
 
 ## display code coverage trends
 
+What a better feedback loop than measuring the work you have accomplished?
+
 ```sh
 python ccguard/ccguard_log.py
 ```
 
 ## synchronize repositories
+
+The use case being: you wish to use ccguard as pre-commit. Your team already has some references.
+Then you could be interested in sharing them.
 
 ```sh
 # upload the report to a distant redis repository
