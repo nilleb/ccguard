@@ -4,9 +4,9 @@ you can only improve! :-)
 
 ccguard compares the current code coverage to past code coverage. ccguard fails unless your new code coverage is equal or better than your past code coverage!
 
-![alt text](static/success.png "ccguard.py in action")
-![alt text](static/failure.png "so bad, a regression")
-![alt text](static/log.png "cc is increasing!")
+![ccguard.py in action](https://github.com/nilleb/ccguard/blob/master/static/success.png?raw=true "ccguard.py in action")
+![so bad, a regression](https://github.com/nilleb/ccguard/blob/master/static/failure.png?raw=true "so bad, a regression")
+![trends](https://github.com/nilleb/ccguard/blob/master/static/log.png "cc is increasing!")
 
 ## requires
 
@@ -20,7 +20,7 @@ ccguard compares the current code coverage to past code coverage. ccguard fails 
 ./distrib.sh
 ```
 
-Should work on both python2 and python3. But python2 is not anymore supported.
+Should work on both python2 and python3. python2 is not anymore supported.
 
 ## contribute
 
@@ -59,7 +59,7 @@ ccguard.py coverage.xml --tolerance 10 --hard-minimum 70
 ccguard.py coverage.xml --adapter web
 ```
 
-please see [how-to-produce-code-coverage-data](docs/how to produce code coverage data.md) to know how to produce code coverage data in your favourite language.
+please see [[how-to-produce-code-coverage-data](docs/how to produce code coverage data.md)](https://github.com/nilleb/ccguard/blob/master/docs/how%20to%20produce%20code%20coverage%20data.md) to know how to produce code coverage data in your favourite language.
 
 ## display code coverage trends
 
