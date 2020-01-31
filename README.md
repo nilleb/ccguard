@@ -59,7 +59,7 @@ ccguard.py coverage.xml --tolerance 10 --hard-minimum 70
 ccguard.py coverage.xml --adapter web
 ```
 
-please see [[how-to-produce-code-coverage-data](docs/how to produce code coverage data.md)](https://github.com/nilleb/ccguard/blob/master/docs/how%20to%20produce%20code%20coverage%20data.md) to know how to produce code coverage data in your favourite language.
+please see [how to produce code coverage data](https://github.com/nilleb/ccguard/blob/master/docs/how%20to%20produce%20code%20coverage%20data.md) in your favourite language.
 
 ## display code coverage trends
 
