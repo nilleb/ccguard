@@ -1,10 +1,10 @@
 import redis
 
-from ccguard.ccguard import ReferenceAdapter
+import ccguard
 from datetime import datetime
 
 
-class RedisAdapter(ReferenceAdapter):
+class RedisAdapter(ccguard.ReferenceAdapter):
     def __init__(self, repository_id, config={}):
         self.repository_id = repository_id
         host = config.get("redis.host")

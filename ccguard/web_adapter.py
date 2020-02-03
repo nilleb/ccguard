@@ -1,10 +1,16 @@
+import os
 import requests
-from ccguard.ccguard import ReferenceAdapter
+import ccguard
 
 
-class WebAdapter(ReferenceAdapter):
+class WebAdapter(ccguard.ReferenceAdapter):
     def __init__(self, repository_id, config={}):
-        self.server = config.get("ccguard.server.address")
+        conf_key = "ccguard.server.address"
+        token_key = "ccguard.token"
+        env_server = os.environ.get(conf_key.replace(".", "_"), None)
+        self.server = env_server if env_server else config.get(conf_key)
+        token = os.environ.get(token_key.replace(".", "_"), None)
+        self.token = token if token else config.get(conf_key, None)
         super().__init__(repository_id, config)
 
     def get_cc_commits(self) -> frozenset:
@@ -22,10 +28,15 @@ class WebAdapter(ReferenceAdapter):
         return r.content.decode("utf-8")
 
     def persist(self, commit_id: str, data: bytes):
+        headers = {}
+        if self.token:
+            headers["Authorization"] = self.token
+
         r = requests.put(
-            "{server}/api/v1/references/{repository_id}/{commit_id}/data".format(
-                self, commit_id=commit_id
-            )
+            "{p.server}/api/v1/references/{p.repository_id}/{commit_id}/data".format(
+                p=self, commit_id=commit_id
+            ),
+            headers=headers,
         )
 
     # does not support `dump` yet

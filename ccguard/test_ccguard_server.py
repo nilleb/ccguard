@@ -20,3 +20,12 @@ def test_put_reference():
             )
             assert result.status_code == 200
             assert result.data.decode("utf-8") == "OK"
+
+
+def text_parse_args():
+    args = ccguard_server.parse_args(
+        ["--adapter", "web", "--port", "1234", "--token", "aaaa"]
+    )
+    assert args.token == "aaaa"
+    assert args.port == 1234
+    assert args.adapter == "web"

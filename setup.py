@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ccguard",
-    version="0.2.1",
+    version="0.3",
     entry_points={
         "console_scripts": [
             "ccguard=ccguard.ccguard:main",
@@ -21,7 +21,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/nilleb/ccguard",
     packages=["ccguard"],
-    install_requires=["pycobertura", "gitpython", "redis", "flask"],
+    install_requires=["pycobertura", "gitpython", "redis", "flask", "requests"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",

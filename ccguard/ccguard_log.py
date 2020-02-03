@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import git
 import argparse
-from ccguard import ccguard
+import ccguard
 import logging
 from xml.etree import ElementTree
 
