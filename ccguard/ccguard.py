@@ -141,7 +141,7 @@ class ReferenceAdapter(object):
 class SqliteAdapter(ReferenceAdapter):
     def __init__(self, repository_id, config):
         super().__init__(repository_id, config)
-        dbpath = config.get("sqlite.dbpath")
+        dbpath = str(config.get("sqlite.dbpath"))
         self.conn = sqlite3.connect(dbpath)
         self._create_table()
 
@@ -199,7 +199,9 @@ class WebAdapter(ReferenceAdapter):
         token_key = "ccguard.token"
         env_server = os.environ.get(conf_key.replace(".", "_"), None)
         self.server = env_server if env_server else config.get(conf_key)
-        self.server = self.server.rstrip("/")
+        self.server = (
+            self.server.rstrip("/") if self.server else "http://localhost:5000"
+        )
         token = os.environ.get(token_key.replace(".", "_"), None)
         self.token = token if token else config.get(conf_key, None)
         super().__init__(repository_id, config)
