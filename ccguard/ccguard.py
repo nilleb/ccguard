@@ -22,6 +22,7 @@ DEFAULT_CONFIGURATION = {
     "redis.port": 6379,
     "redis.db": 0,
     "redis.password": None,
+    "ccguard.server.address" : "http://127.0.0.1:5000",
     "threshold.tolerance": 0,
     "threshold.hard-minimum": -1,
     "sqlite.dbpath": HOME.joinpath(DB_FILE_NAME),
@@ -265,25 +266,37 @@ def adapter_factory(adapter, config):
         if adapter == "sqlite":
             adapter_class = SqliteAdapter
         if adapter == "redis":
-            from ccguard import redis_adapter
+            if __name__ == "__main__":
+                from redis_adapter import RedisAdapter
+            else:
+                from ccguard.redis_adapter import RedisAdapter
 
-            adapter_class = redis_adapter.RedisAdapter
+            adapter_class = RedisAdapter
         if adapter == "web":
-            from ccguard import web_adapter
+            if __name__ == "main":
+                from web_adapter import WebAdapter
+            else:
+                from ccguard.web_adapter import WebAdapter
 
-            adapter_class = web_adapter.WebAdapter
+            adapter_class = WebAdapter
 
         if adapter_class:
             return adapter_class
 
     if config.get("adapter.class", None) == "redis":
-        from ccguard import redis_adapter
+        if __name__ == "__main__":
+            from redis_adapter import RedisAdapter
+        else:
+            from ccguard.redis_adapter import RedisAdapter
 
-        adapter_class = redis_adapter.RedisAdapter
+        adapter_class = RedisAdapter
     elif config.get("adapter.class", None) == "web":
-        from ccguard import web_adapter
+        if __name__ == "main":
+            from web_adapter import WebAdapter
+        else:
+            from ccguard.web_adapter import WebAdapter
 
-        adapter_class = web_adapter.WebAdapter
+        adapter_class = WebAdapter
     else:
         adapter_class = SqliteAdapter
 
