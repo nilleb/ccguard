@@ -48,23 +48,6 @@ jobs:
             venv/bin/pytest --cov-report xml --cov ccguard
             venv/bin/python ccguard/ccguard.py --html coverage.xml --adapter web
             
-      - run:
-          name: run flake8
-          command: |
-            . venv/bin/activate
-
-      - run:
-          name: run tests
-          command: |
-            . venv/bin/activate
-            venv/bin/pytest --cov-report xml --cov ccguard
-            
-      - run:
-          name: run ccguard on itself
-          command: |
-            . venv/bin/activate
-            venv/bin/python ccguard/ccguard.py --html coverage.xml --consider-uncommitted-changes --adapter web
-
       - store_artifacts:
           path: test-reports
           destination: test-reports
