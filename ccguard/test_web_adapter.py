@@ -1,14 +1,13 @@
 from unittest.mock import MagicMock
-from ccguard.web_adapter import WebAdapter
-import ccguard
+from . import ccguard
 
 
 def test_web_adapter():
-    adapter = WebAdapter("rrr")
+    adapter = ccguard.WebAdapter("rrr")
     requests_mock = MagicMock()
     data = "dump"
     requests_mock.get = MagicMock(return_value=MagicMock(json=data))
-    ccguard.web_adapter.requests = requests_mock
+    ccguard.requests = requests_mock
     response = adapter.dump()
     assert requests_mock.get.called
     assert response == data

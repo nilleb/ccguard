@@ -7,8 +7,12 @@ import logging
 import shlex
 import subprocess
 import sqlite3
+import redis
 import lxml.etree as ET
 from pathlib import Path
+from datetime import datetime
+import os
+import requests
 from pycobertura import Cobertura, CoberturaDiff, TextReporterDelta, TextReporter
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 
@@ -189,6 +193,81 @@ class SqliteAdapter(ReferenceAdapter):
         self.conn.execute(statement)
 
 
+class WebAdapter(ReferenceAdapter):
+    def __init__(self, repository_id, config={}):
+        conf_key = "ccguard.server.address"
+        token_key = "ccguard.token"
+        env_server = os.environ.get(conf_key.replace(".", "_"), None)
+        self.server = env_server if env_server else config.get(conf_key)
+        token = os.environ.get(token_key.replace(".", "_"), None)
+        self.token = token if token else config.get(conf_key, None)
+        super().__init__(repository_id, config)
+
+    def get_cc_commits(self) -> frozenset:
+        r = requests.get(
+            "{p.server}/api/v1/references/{p.repository_id}/all".format(p=self)
+        )
+        return frozenset(r.json())
+
+    def retrieve_cc_data(self, commit_id: str) -> bytes:
+        r = requests.get(
+            "{p.server}/api/v1/references/{p.repository_id}/{commit_id}/data".format(
+                p=self, commit_id=commit_id
+            )
+        )
+        return r.content.decode("utf-8")
+
+    def persist(self, commit_id: str, data: bytes):
+        headers = {}
+        if self.token:
+            headers["Authorization"] = self.token
+
+        requests.put(
+            "{p.server}/api/v1/references/{p.repository_id}/{commit_id}/data".format(
+                p=self, commit_id=commit_id
+            ),
+            headers=headers,
+        )
+
+    def dump(self):
+        print(requests.get)
+        r = requests.get(
+            "{p.server}/api/v1/references/{p.repository_id}/data".format(p=self)
+        )
+        return r.json
+
+
+class RedisAdapter(ReferenceAdapter):
+    def __init__(self, repository_id, config={}):
+        self.repository_id = repository_id
+        host = config.get("redis.host")
+        port = config.get("redis.port")
+        db = config.get("redis.db")
+        password = config.get("redis.password")
+        self.redis = redis.Redis(host=host, port=port, db=db, password=password)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.redis.close()
+
+    def get_cc_commits(self):
+        return frozenset(self.redis.hkeys(self.repository_id))
+
+    def retrieve_cc_data(self, commit_id):
+        return self.redis.hget(self.repository_id, commit_id)
+
+    def persist(self, commit_id, data):
+        self.redis.hset(self.repository_id, commit_id, data)
+        self.redis.hset(
+            "{}:time".format(self.repository_id), commit_id, str(datetime.now())
+        )
+
+    def dump(self):
+        return self.redis.hgetall(self.repository_id)
+
+
 def determine_parent_commit(db_commits: frozenset, iter_callable: callable) -> str:
     for commits_chunk in iter_callable():
         for commit in commits_chunk:
@@ -266,35 +345,16 @@ def adapter_factory(adapter, config):
         if adapter == "sqlite":
             adapter_class = SqliteAdapter
         if adapter == "redis":
-            if __name__ == "__main__":
-                from redis_adapter import RedisAdapter
-            else:
-                from ccguard.redis_adapter import RedisAdapter
-
             adapter_class = RedisAdapter
         if adapter == "web":
-            if __name__ == "main":
-                from web_adapter import WebAdapter
-            else:
-                from ccguard.web_adapter import WebAdapter
-
             adapter_class = WebAdapter
 
         if adapter_class:
             return adapter_class
 
     if config.get("adapter.class", None) == "redis":
-        if __name__ == "__main__":
-            from redis_adapter import RedisAdapter
-        else:
-            from ccguard.redis_adapter import RedisAdapter
-
         adapter_class = RedisAdapter
     elif config.get("adapter.class", None) == "web":
-        if __name__ == "main":
-            from web_adapter import WebAdapter
-        else:
-            from ccguard.web_adapter import WebAdapter
 
         adapter_class = WebAdapter
     else:
