@@ -22,7 +22,7 @@ DEFAULT_CONFIGURATION = {
     "redis.port": 6379,
     "redis.db": 0,
     "redis.password": None,
-    "ccguard.server.address" : "http://127.0.0.1:5000",
+    "ccguard.server.address": "http://127.0.0.1:5000",
     "threshold.tolerance": 0,
     "threshold.hard-minimum": -1,
     "sqlite.dbpath": HOME.joinpath(DB_FILE_NAME),
