@@ -76,3 +76,19 @@ source env/bin/activate
 pip install lcov_cobertura
 python env/lib/python3.7/site-packages/lcov_cobertura.py lcov.info -o coverage.xml
 ```
+
+## .net
+
+DISCLAIMER: I haven't tested this personally
+
+[official docuemntation](https://docs.microsoft.com/fr-fr/visualstudio/test/vstest-console-options?view=vs-2019)
+the flag `/Enablecodecoverage` will allow you to collect code coverage data in a `.coverage`. You should read https://github.com/danielpalme/ReportGenerator/wiki/Visual-Studio-Coverage-Tools in order to knwo more about how to convert this to xml.
+
+You could the ue something like https://github.com/jenkinsci/mstest-plugin/blob/master/src/main/resources/hudson/plugins/mstest/MSTestCoverageToEmma.xsl to convert it to cobertura format.
+
+## java - jacoco
+
+DISCLAIMER: I haven't tested this personally
+
+setup your builder in order to collect jacoco coverage
+use [cover2cover](https://github.com/rix0rrr/cover2cover) to convert jacoco.xml reports to cobertura
