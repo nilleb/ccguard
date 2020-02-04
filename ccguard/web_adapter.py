@@ -32,7 +32,7 @@ class WebAdapter(ccguard.ReferenceAdapter):
         if self.token:
             headers["Authorization"] = self.token
 
-        r = requests.put(
+        requests.put(
             "{p.server}/api/v1/references/{p.repository_id}/{commit_id}/data".format(
                 p=self, commit_id=commit_id
             ),

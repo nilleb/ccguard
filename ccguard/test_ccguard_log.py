@@ -56,5 +56,5 @@ def test_parse_optionals():
 
 
 def test_parse_shortest():
-    args = ccguard_log.parse_args(["--adapter", "sqlite",])
+    args = ccguard_log.parse_args(["--adapter", "sqlite"])
     assert args.adapter == "sqlite"

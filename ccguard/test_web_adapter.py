@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from ccguard.web_adapter import WebAdapter
 import ccguard
 

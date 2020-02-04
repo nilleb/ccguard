@@ -116,9 +116,14 @@ def setup_redis_mock():
         data[a] = v
         print(data)
 
-    hkeys = lambda a: data.get(a, {}).keys()
-    get_data = lambda a, b: data.get(a, {}).get(b)
-    dump = lambda a: data.get(a, {}).items()
+    def hkeys(a):
+        return data.get(a, {}).keys()
+
+    def get_data(a, b):
+        return data.get(a, {}).get(b)
+
+    def dump(a):
+        return data.get(a, {}).items()
 
     redis_client = MagicMock()
     redis_client.hkeys = MagicMock(side_effect=hkeys)
@@ -156,14 +161,20 @@ def test_adapter_factory():
 def test_print_cc_report():
     report = Cobertura("ccguard/test_data/sample_coverage.xml")
     output = []
-    log_function = lambda a: output.append(a)
+
+    def log_function(a):
+        return output.append(a)
+
     ccguard.print_cc_report(report, log_function=log_function)
 
 
 def test_print_cc_report_longer():
     report = Cobertura("ccguard/test_data/sample_coverage_longer.xml")
     output = []
-    log_function = lambda a: output.append(a)
+
+    def log_function(a):
+        return output.append(a)
+
     ccguard.print_cc_report(report, log_function=log_function)
     assert "..details omissed.." in output
 
@@ -178,7 +189,10 @@ def test_print_delta_report():
         source=ccguard.GitAdapter().get_root_path() + "/ccguard",
     )
     output = []
-    log_function = lambda a: output.append(a)
+
+    def log_function(a):
+        return output.append(a)
+
     ccguard.print_delta_report(reference, challenger, log_function=log_function)
     assert output
 

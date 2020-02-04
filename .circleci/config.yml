@@ -40,18 +40,18 @@ jobs:
           key: v1-dependencies-{{ checksum "dev-requirements.txt" }}
 
       - run:
-          name: run black
+          name: run builr workflow
           command: |
             . venv/bin/activate
             venv/bin/black --check ccguard/*.py
+            venv/bin/flake8 ccguard/*.py
             venv/bin/pytest --cov-report xml --cov ccguard
-            venv/bin/python ccguard/ccguard.py --html coverage.xml --consider-uncommitted-changes
+            venv/bin/python ccguard/ccguard.py --html coverage.xml --adapter web
             
       - run:
           name: run flake8
           command: |
             . venv/bin/activate
-            venv/bin/flake8 ccguard/ccguard*.py
 
       - run:
           name: run tests

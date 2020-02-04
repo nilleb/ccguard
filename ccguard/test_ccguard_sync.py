@@ -76,7 +76,7 @@ def test_parse_optionals():
 
 
 def test_parse_shortest():
-    args = ccguard_sync.parse_args(["redis", "sqlite",])
+    args = ccguard_sync.parse_args(["redis", "sqlite"])
     assert args.source_adapter == "redis"
     assert args.dest_adapter == "sqlite"
 
@@ -84,6 +84,4 @@ def test_parse_shortest():
 def test_main():
     commit = fake_commit()
     ccguard.adapter_factory = lambda a, b: mock_adapter_class(commit.hexsha)
-    ccguard_sync.main(
-        ["redis", "redis",]
-    )
+    ccguard_sync.main(["redis", "redis"])
