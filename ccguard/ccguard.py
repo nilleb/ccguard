@@ -199,6 +199,7 @@ class WebAdapter(ReferenceAdapter):
         token_key = "ccguard.token"
         env_server = os.environ.get(conf_key.replace(".", "_"), None)
         self.server = env_server if env_server else config.get(conf_key)
+        self.server = self.server.rstrip("/")
         token = os.environ.get(token_key.replace(".", "_"), None)
         self.token = token if token else config.get(conf_key, None)
         super().__init__(repository_id, config)
@@ -210,7 +211,10 @@ class WebAdapter(ReferenceAdapter):
         try:
             return frozenset(r.json())
         except json.decoder.JSONDecodeError:
-            logging.warning("Got response %s", r.content.decode("utf-8"))
+            logging.warning(
+                "Got unexpected server response. Is the server configuration correct?\n%s",
+                r.content.decode("utf-8"),
+            )
             return frozenset()
 
     def retrieve_cc_data(self, commit_id: str) -> bytes:
