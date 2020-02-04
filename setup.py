@@ -21,7 +21,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/nilleb/ccguard",
     packages=["ccguard"],
-    install_requires=["pycobertura", "gitpython", "redis", "flask", "requests"],
+    install_requires=["pycobertura", "gitpython", "redis", "flask", "requests", "lxml"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
