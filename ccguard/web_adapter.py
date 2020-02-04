@@ -39,4 +39,9 @@ class WebAdapter(ccguard.ReferenceAdapter):
             headers=headers,
         )
 
-    # does not support `dump` yet
+    def dump(self):
+        print(requests.get)
+        r = requests.get(
+            "{p.server}/api/v1/references/{p.repository_id}/data".format(p=self)
+        )
+        return r.json

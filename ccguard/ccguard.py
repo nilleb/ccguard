@@ -475,7 +475,9 @@ def main():
         has_coverage_improved = has_better_coverage(
             diff, tolerance=tolerance, hard_minimum=hard_minimum
         )
+
         print_diff_message(diff, has_coverage_improved=has_coverage_improved)
+
         print_delta_report(
             reference, challenger, report_file="diff.html" if args.html else None
         )

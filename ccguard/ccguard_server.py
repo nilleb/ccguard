@@ -31,6 +31,17 @@ def api_references_all(repository_id):
     return jsonify(list(commits))
 
 
+@app.route("/api/v1/references/<string:repository_id>/data", methods=["GET"])
+def api_references_dump(repository_id):
+    config = ccguard.configuration(repository_id)
+    adapter_class = ccguard.adapter_factory(None, config)
+    data = []
+    with adapter_class(repository_id, config) as adapter:
+        data = adapter.dump()
+
+    return jsonify(list(data))
+
+
 @app.route(
     "/api/v1/references/<string:repository_id>/<string:commit_id>/data",
     methods=["GET"],
@@ -44,7 +55,6 @@ def api_references_download_data(repository_id, commit_id):
 
 def check_auth():
     token = app.config.get("TOKEN", None)
-    print(token)
     if token:
         auth = request.headers.get("authorization", None)
         if not auth:
@@ -111,16 +121,36 @@ def parse_args(args=None):
         "--token", dest="token", help="the access token for this server"
     )
     parser.add_argument(
+        "--host",
+        dest="host",
+        help=(
+            "the IP address we are going to listen on "
+            "(default: 127.0.0.1, public: 0.0.0.0)"
+        ),
+        default="127.0.0.1",
+    )
+    parser.add_argument(
+        "--cert", dest="certificate", help="the ssl certificate pem file",
+    )
+    parser.add_argument(
+        "--private-key", dest="private_key", help="the ssl private key pem file",
+    )
+    parser.add_argument(
         "--port", dest="port", help="the port to listen on", type=int,
     )
 
     return parser.parse_args(args)
 
 
-def main(args=None):
+def main(args=None, app=app):
     args = parse_args(args)
     app.config["TOKEN"] = args.token
-    app.run(port=args.port)
+    ssl_context = (
+        (args.certificate, args.private_key)
+        if args.certificate and args.private_key
+        else None
+    )
+    app.run(host=args.host, port=args.port, ssl_context=ssl_context)
 
 
 if __name__ == "__main__":
