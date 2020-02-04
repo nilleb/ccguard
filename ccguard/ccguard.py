@@ -207,7 +207,8 @@ class WebAdapter(ReferenceAdapter):
         r = requests.get(
             "{p.server}/api/v1/references/{p.repository_id}/all".format(p=self)
         )
-        return frozenset(r.json())
+        parsed = r.json()
+        return frozenset(parsed) if parsed else frozenset()
 
     def retrieve_cc_data(self, commit_id: str) -> bytes:
         r = requests.get(

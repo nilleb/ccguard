@@ -145,11 +145,17 @@ def test_adapter_factory():
     config = dict(ccguard.DEFAULT_CONFIGURATION)
     adapter_class = ccguard.adapter_factory(None, config)
     assert adapter_class is ccguard.SqliteAdapter
-    adapter_class = ccguard.adapter_factory("redis", config)
-    assert adapter_class is ccguard.RedisAdapter
-    config["adapter.class"] = "redis"
-    adapter_class = ccguard.adapter_factory(None, config)
-    assert adapter_class is ccguard.RedisAdapter
+
+    def scenario(keyword, clazz):
+        adapter_class = ccguard.adapter_factory(keyword, config)
+        assert adapter_class is clazz
+        config["adapter.class"] = keyword
+        adapter_class = ccguard.adapter_factory(None, config)
+        assert adapter_class is clazz
+
+    scenario("redis", ccguard.RedisAdapter)
+    scenario("web", ccguard.WebAdapter)
+
     adapter_class = ccguard.adapter_factory("sqlite", config)
     assert adapter_class is ccguard.SqliteAdapter
     config["adapter.class"] = "sqlite"
