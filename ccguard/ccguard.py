@@ -237,6 +237,7 @@ class WebAdapter(ReferenceAdapter):
                 p=self, commit_id=commit_id
             ),
             headers=headers,
+            data=data,
         )
 
     def dump(self):

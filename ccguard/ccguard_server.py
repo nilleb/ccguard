@@ -2,6 +2,7 @@ import io
 import logging
 import argparse
 import flask
+import lxml
 from flask import request, jsonify, abort
 from pycobertura import Cobertura
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
@@ -15,8 +16,8 @@ app.config["DEBUG"] = True
 def home():
     return (
         "<h1>CCGuard Server</h1>"
-        "<p>A CCGuard prototype API for uploading reports, "
-        "listing references and displaying reports.</p>"
+        '<p>A <a href="https://github.com/nilleb/ccguard">CCGuard</a> '
+        "prototype API for mananing code coverage reports.</p>"
     )
 
 
@@ -84,6 +85,8 @@ def api_generate_report(repository_id, commit_id):
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
         reference = retrieve(adapter, commit_id)
+        if not reference:
+            return "<h1>Huh-oh</h1><p>Sorry, no data found.</p>"
         report = HtmlReporter(reference)
         return report.generate()
 
@@ -91,8 +94,12 @@ def api_generate_report(repository_id, commit_id):
 def retrieve(adapter, commit_id, source="ccguard"):
     cc_reference_data = adapter.retrieve_cc_data(commit_id)
     logging.debug("Reference data (%s): %r", commit_id, cc_reference_data)
-    reference_fd = io.StringIO(cc_reference_data)
-    return Cobertura(reference_fd, source=source)
+    reference_fd = io.BytesIO(cc_reference_data)
+
+    try:
+        return Cobertura(reference_fd, source=source)
+    except lxml.etree.XMLSyntaxError:
+        return
 
 
 @app.route(
@@ -140,6 +147,11 @@ def parse_args(args=None):
     )
 
     return parser.parse_args(args)
+
+
+def load_app(token):
+    app.config["TOKEN"] = token
+    return app
 
 
 def main(args=None, app=app):
