@@ -1,0 +1,13 @@
+[Unit]
+Description=Gunicorn instance to serve myproject
+After=network.target
+
+[Service]
+User=${USER}
+Group=www-data
+WorkingDirectory=/home/${USER}
+Environment="PATH=/home/${USER}/env/bin"
+ExecStart=/home/${USER}/env/bin/gunicorn --workers 3 --bind unix:ccguard.sock -m 007 ccguard.ccguard_server:app
+
+[Install]
+WantedBy=multi-user.target
