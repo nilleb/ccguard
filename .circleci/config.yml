@@ -40,7 +40,7 @@ jobs:
           key: v1-dependencies-{{ checksum "dev-requirements.txt" }}
 
       - run:
-          name: run builr workflow
+          name: run build workflow
           command: |
             . venv/bin/activate
             venv/bin/black --check ccguard/*.py

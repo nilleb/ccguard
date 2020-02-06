@@ -12,30 +12,25 @@ pip install ccguard
 ccguard_server --port 17132 --token EyNHvrWsP6BiiS3QrmzoY3NQNmHLMeYD7SVfAVYK
 ```
 
-## circleci
+(you also have a server configuration script/sample in the folder docs/server-setup)
 
-expose environment variables
+## circleci workflows
 
-```sh
-CCGUARD_SERVER_ADDRESS=http://ccguard_server:17132
-CCGUARD_TOKEN=EyNHvrWsP6BiiS3QrmzoY3NQNmHLMeYD7SVfAVYK
-```
-
-add to your circleci.yaml
-
-```sh
-ccguard --adapter web coverage.xml
-```
+see [how to integrate ccguard in your CircleCI job](how%20to%20integrate%20ccguard%20in%20your%20CircleCI%20job.md) for more detailed examples.
 
 ## on every team member host
 
 you can retrieve the data collected by ccguard, periodically, with the command
 
 ```sh
-CCGUARD_SERVER_ADDRESS=http://ccguard_server:17132
+# set the ccguard server address
+# via the environment variable
+export CCGUARD_SERVER_ADDRESS=http://ccguard_server:17132
+# or using the .ccguard.config.json
+
 # no token required to retrieve the coverage data
-# retrieve the data (requires ccguard 0.4)
+# retrieve the data (requires at least ccguard 0.4)
 ccguard_sync web sqlite
 # inspect the log (directly in the repository you want to check)
-ccguard_log
+ccguard_log --adapter web
 ```

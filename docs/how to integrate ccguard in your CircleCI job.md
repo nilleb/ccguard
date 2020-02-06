@@ -41,3 +41,16 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
             source /tmp/workspace/env/bin/activate
             ccguard --adapter web coverage.xml
 ```
+
+## python workflow
+
+```yaml
+      - run:
+          name: run build workflow
+          command: |
+            . venv/bin/activate
+            venv/bin/black --check ccguard/*.py
+            venv/bin/flake8 ccguard/*.py
+            venv/bin/pytest --cov-report xml --cov ccguard
+            venv/bin/python ccguard/ccguard.py --html coverage.xml --adapter web
+```
