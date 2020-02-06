@@ -3,6 +3,7 @@
 
 # the domain to which the nginx configuration will be bound
 DOMAIN=mysample.comain
+TOKEN=secret
 
 sudo apt update
 sudo apt install nginx
@@ -11,6 +12,8 @@ sudo apt install python3-venv
 
 curl https://github.com/nilleb/ccguard/tree/master/docs/server-setup/ccguard.service --output ccguard.service.template
 curl https://github.com/nilleb/ccguard/tree/master/docs/server-setup/nginx-ccguard --output nginx-ccguard.template
+
+mkdir $HOME/letsencrypt
 
 . envsubst_surrogate.cfg
 printf "%s\n" "$(apply_shell_expansion ccguard.service.template)" > ccguard.service
@@ -32,3 +35,12 @@ mv nginx-ccguard /etc/nginx/sites-available/ccguard
 sudo ln -s /etc/nginx/sites-available/ccguard /etc/nginx/sites-enabled
 sudo nginx -t
 sudo systemctl restart nginx
+
+sudo apt-get install software-properties-common
+yes "" | sudo add-apt-repository ppa:certbot/certbot
+sudo apt-get update
+sudo apt-get install certbot
+sudo certbot certonly --webroot -w $HOME/letsencrypt -d $DOMAIN
+
+# to renew the certificate
+# sudo certbot renew

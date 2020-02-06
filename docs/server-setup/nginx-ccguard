@@ -1,9 +1,17 @@
 server {
     listen 80;
+    # you should uncomment this line only after that certbot has been setup
+    # listen 443 ssl;
     server_name ${DOMAIN};
 
+    # you should uncomment these lines only after that certbot has been setup
+    # ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    location ~ /.well-known {
+        root ${HOME}/letsencrypt;
+    }
     location / {
         include proxy_params;
-        proxy_pass http://unix:/home/${USER}/ccguard.sock;
+        proxy_pass http://unix:${HOME}/ccguard.sock;
     }
 }
