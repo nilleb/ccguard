@@ -4,6 +4,7 @@
 # the domain to which the nginx configuration will be bound
 DOMAIN=mysample.comain
 TOKEN=secret
+use_ssl="true"
 
 sudo apt update
 sudo apt install nginx
@@ -36,11 +37,13 @@ sudo ln -s /etc/nginx/sites-available/ccguard /etc/nginx/sites-enabled
 sudo nginx -t
 sudo systemctl restart nginx
 
-sudo apt-get install software-properties-common
-yes "" | sudo add-apt-repository ppa:certbot/certbot
-sudo apt-get update
-sudo apt-get install certbot
-sudo certbot certonly --webroot -w $HOME/letsencrypt -d $DOMAIN
-
-# to renew the certificate
-# sudo certbot renew
+if [ "$use_ssl" == "true" ]; then
+    curl https://github.com/nilleb/ccguard/tree/master/docs/server-setup/nginx-ssl --output nginx-ssl
+    sudo apt-get install software-properties-common
+    yes "" | sudo add-apt-repository ppa:certbot/certbot
+    sudo apt-get update
+    sudo apt-get install certbot
+    sudo certbot certonly --webroot -w $HOME/letsencrypt -d $DOMAIN
+    # to renew the certificate
+    # sudo certbot renew
+fi
