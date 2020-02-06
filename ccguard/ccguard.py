@@ -129,10 +129,10 @@ class ReferenceAdapter(object):
     def get_cc_commits(self) -> frozenset:
         raise NotImplementedError()
 
-    def retrieve_cc_data(self, commit_id: str) -> Optional[str]:
+    def retrieve_cc_data(self, commit_id: str) -> Optional[bytes]:
         raise NotImplementedError()
 
-    def persist(self, commit_id: str, data: str):
+    def persist(self, commit_id: str, data: bytes):
         raise NotImplementedError()
 
     def dump(self) -> list:
@@ -161,7 +161,7 @@ class SqliteAdapter(ReferenceAdapter):
             c for ct in self.conn.execute(commits_query).fetchall() for c in ct
         )
 
-    def retrieve_cc_data(self, commit_id: str) -> Optional[str]:
+    def retrieve_cc_data(self, commit_id: str) -> Optional[bytes]:
         query = 'SELECT coverage_data FROM timestamped_coverage_{repository_id}\
                 WHERE commit_id="{commit_id}"'.format(
             repository_id=self.repository_id, commit_id=commit_id
@@ -173,7 +173,10 @@ class SqliteAdapter(ReferenceAdapter):
             return next(iter(result))
         return None
 
-    def persist(self, commit_id: str, data: str):
+    def persist(self, commit_id: str, data: bytes):
+        if not data or not isinstance(data, bytes):
+            raise Exception("Unwilling to persist invalid data.")
+
         query = """INSERT INTO timestamped_coverage_{repository_id}
         (commit_id, coverage_data) VALUES (?, ?)""".format(
             repository_id=self.repository_id
@@ -239,7 +242,7 @@ class WebAdapter(ReferenceAdapter):
             )
             return frozenset()
 
-    def retrieve_cc_data(self, commit_id: str) -> str:
+    def retrieve_cc_data(self, commit_id: str) -> Optional[bytes]:
         r = requests.get(
             "{p.server}/api/v1/references/{p.repository_id}/{commit_id}/data".format(
                 p=self, commit_id=commit_id
@@ -247,9 +250,9 @@ class WebAdapter(ReferenceAdapter):
         )
         return r.content.decode("utf-8")
 
-    def persist(self, commit_id: str, data: str):
-        if not data:
-            return
+    def persist(self, commit_id: str, data: bytes):
+        if not data or not isinstance(data, bytes):
+            raise Exception("Unwilling to persist invalid data.")
 
         headers = {}
         if self.token:
@@ -297,10 +300,13 @@ class RedisAdapter(ReferenceAdapter):
     def get_cc_commits(self) -> frozenset:
         return frozenset(self.redis.hkeys(self.repository_id))
 
-    def retrieve_cc_data(self, commit_id: str) -> str:
+    def retrieve_cc_data(self, commit_id: str) -> Optional[bytes]:
         return self.redis.hget(self.repository_id, commit_id)
 
-    def persist(self, commit_id: str, data: str):
+    def persist(self, commit_id: str, data: bytes):
+        if not data or not isinstance(data, bytes):
+            raise Exception("Unwilling to persist invalid data.")
+
         self.redis.hset(self.repository_id, commit_id, data)
         self.redis.hset(
             "{}:time".format(self.repository_id), commit_id, str(datetime.now())
@@ -328,7 +334,7 @@ def determine_parent_commit(
 def persist(
     repo_adapter: GitAdapter, reference_adapter: ReferenceAdapter, report_file: str
 ):
-    with open(report_file) as fd:
+    with open(report_file, "rb") as fd:
         data = fd.read()
         current_commit = repo_adapter.get_current_commit_id()
         reference_adapter.persist(current_commit, data)
@@ -577,7 +583,7 @@ def main():
             cc_reference_data = adapter.retrieve_cc_data(commit_id)
             logging.debug("Reference data: %r", cc_reference_data)
             if cc_reference_data:
-                reference_fd = io.StringIO(cc_reference_data)
+                reference_fd = io.BytesIO(cc_reference_data)
                 reference = Cobertura(reference_fd, source=source)
                 diff = CoberturaDiff(reference, challenger)
             else:

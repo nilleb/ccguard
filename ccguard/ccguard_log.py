@@ -70,7 +70,8 @@ def detailed_references(repo_folder=".", limit=30, adapter_class=ccguard.SqliteA
         return AnnotatedCommit(commit, references.get(commit.hexsha, None))
 
     return [
-        enrich_commit(repo.commit(logEntry)) for logEntry in list(repo.iter_commits())[:limit]
+        enrich_commit(repo.commit(logEntry))
+        for logEntry in list(repo.iter_commits())[:limit]
     ]
 
 

@@ -52,7 +52,7 @@ def test_persist():
 
     data = "<coverage/>"
     path = "ccguard/test_data/fake_coverage.xml"
-    with open(path) as fd:
+    with open(path, "rb") as fd:
         data = fd.read()
 
     ccguard.persist(repo, reference, path)
@@ -78,33 +78,6 @@ def test_configuration():
     assert config
     dbpath_override = config.get("sqlite.dbpath")
     assert dbpath != dbpath_override
-
-
-def adapter_scenario(adapter: ccguard.ReferenceAdapter):
-    commits = adapter.get_cc_commits()
-    adapter.persist("one", "<coverage>1</coverage>")
-    adapter.persist("two", "<coverage>2</coverage>")
-    adapter.persist("thr", "<coverage>3</coverage>")
-    commits = adapter.get_cc_commits()
-    assert len(commits) == 3
-    data = adapter.retrieve_cc_data("one")
-    assert "1" in data
-    data = adapter.retrieve_cc_data("two")
-    assert "2" in data
-    data = adapter.retrieve_cc_data("thr")
-    assert "3" in data
-    data = adapter.dump()
-    assert len(data) == 3
-    assert not adapter.retrieve_cc_data("not found")
-    for commit_id, reference in data:
-        assert isinstance(commit_id, str)
-        assert "<coverage>" in reference
-
-
-def test_sqladapter():
-    config = ccguard.configuration("ccguard/test_data/configuration_override")
-    with ccguard.SqliteAdapter("test", config) as adapter:
-        adapter_scenario(adapter)
 
 
 def setup_redis_mock():
@@ -134,10 +107,40 @@ def setup_redis_mock():
     return redis_client
 
 
+def adapter_scenario(adapter: ccguard.ReferenceAdapter):
+    commits = adapter.get_cc_commits()
+    adapter.persist("one", b"<coverage>1</coverage>")
+    adapter.persist("two", b"<coverage>2</coverage>")
+    adapter.persist("thr", b"<coverage>3</coverage>")
+    commits = adapter.get_cc_commits()
+    assert len(commits) == 3
+    data = adapter.retrieve_cc_data("one")
+    assert isinstance(data, bytes)
+    assert data.find(b"1")
+    data = adapter.retrieve_cc_data("two")
+    assert data.find(b"2")
+    data = adapter.retrieve_cc_data("thr")
+    assert data.find(b"3")
+    data = adapter.dump()
+    assert len(data) == 3
+    assert not adapter.retrieve_cc_data("not found")
+    for commit_id, reference in data:
+        assert isinstance(commit_id, str)
+        assert reference.find(b"coverage"), reference
+
+
+def test_sqladapter():
+    config = ccguard.configuration("ccguard/test_data/configuration_override")
+    with ccguard.SqliteAdapter("test", config) as adapter:
+        adapter_scenario(adapter)
+    # rather an integration test: we need to cleanup
+    os.unlink("./ccguard.db")
+
+
 def test_redis_adapter():
     redis.Redis = MagicMock(return_value=setup_redis_mock())
 
-    config = ccguard.configuration("ccguard/test_data/configuration_override")
+    config = ccguard.configuration()
     with ccguard.RedisAdapter("test", config) as adapter:
         adapter_scenario(adapter)
 

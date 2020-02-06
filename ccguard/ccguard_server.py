@@ -112,7 +112,7 @@ def api_upload_reference(repository_id, commit_id):
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
-        data = request.get_data(as_text=True)
+        data = request.get_data()
         adapter.persist(commit_id, data)
         return "{} bytes ({}) received".format(len(data), type(data).__name__)
 
@@ -151,7 +151,7 @@ def api_generate_report_debug(repository_id, commit_id):
 
 def retrieve(adapter, commit_id, source="ccguard"):
     cc_reference_data = adapter.retrieve_cc_data(commit_id)
-    reference_fd = io.StringIO(cc_reference_data)
+    reference_fd = io.BytesIO(cc_reference_data)
 
     try:
         return Cobertura(reference_fd, source=source)

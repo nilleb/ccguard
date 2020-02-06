@@ -21,7 +21,7 @@ def test_put_reference():
                 data=data,
             )
             assert result.status_code == 200
-            assert result.data.decode("utf-8") == "OK"
+            assert "received" in result.data.decode("utf-8")
             assert adapter.persist.called
 
 
