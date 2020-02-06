@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ccguard",
-    version="0.3.5",
+    version="0.3.6",
     entry_points={
         "console_scripts": [
             "ccguard=ccguard.ccguard:main",
