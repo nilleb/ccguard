@@ -83,22 +83,38 @@ def api_references_debug(repository_id):
     return jsonify({"repository_id": repository_id, "data": output})
 
 
-@app.route("/api/v1/references/<string:repository_id>/data", methods=["GET"])
-def api_references_dump(repository_id):
-    data = dump_data(repository_id)
-
-    return jsonify(list(data))
-
-
 @app.route(
     "/api/v1/references/<string:repository_id>/<string:commit_id>/data",
     methods=["GET"],
 )
-def api_references_download_data(repository_id, commit_id):
+def api_reference_download_data(repository_id, commit_id):
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
-        return adapter.retrieve_cc_data(commit_id)
+        response = adapter.retrieve_cc_data(commit_id)
+        if not response:
+            abort(404)
+        return response
+
+
+@app.route(
+    "/api/v1/references/<string:repository_id>/<string:commit_id>/debug",
+    methods=["GET"],
+)
+def api_reference_download_data_debug(repository_id, commit_id):
+    halt = check_auth()
+    if halt:
+        abort(*halt)
+
+    config = ccguard.configuration()
+    adapter_class = ccguard.adapter_factory(None, config)
+    with adapter_class(repository_id, config) as adapter:
+        cc_reference_data = adapter.retrieve_cc_data(commit_id)
+        return {
+            "commit_id": commit_id,
+            "data_len": len(cc_reference_data) if cc_reference_data else None,
+            "data_type": type(cc_reference_data).__name__,
+        }
 
 
 @app.route(
@@ -113,7 +129,10 @@ def api_upload_reference(repository_id, commit_id):
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
         data = request.get_data()
-        adapter.persist(commit_id, data)
+        try:
+            adapter.persist(commit_id, data)
+        except Exception:
+            abort(400, "Invalid request.")
         return "{} bytes ({}) received".format(len(data), type(data).__name__)
 
 
@@ -124,29 +143,9 @@ def api_generate_report(repository_id, commit_id):
     with adapter_class(repository_id, config) as adapter:
         reference = retrieve(adapter, commit_id)
         if not reference:
-            return "<h1>Huh-oh</h1><p>Sorry, no data found.</p>"
+            abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
         report = HtmlReporter(reference)
         return report.generate()
-
-
-@app.route(
-    "/api/v1/references/<string:repository_id>/<string:commit_id>/debug",
-    methods=["GET"],
-)
-def api_generate_report_debug(repository_id, commit_id):
-    halt = check_auth()
-    if halt:
-        abort(*halt)
-
-    config = ccguard.configuration()
-    adapter_class = ccguard.adapter_factory(None, config)
-    with adapter_class(repository_id, config) as adapter:
-        cc_reference_data = adapter.retrieve_cc_data(commit_id)
-        return {
-            "commit_id": commit_id,
-            "data_len": len(cc_reference_data) if cc_reference_data else None,
-            "data_type": type(cc_reference_data).__name__,
-        }
 
 
 def retrieve(adapter, commit_id, source="ccguard"):
@@ -170,7 +169,7 @@ def api_generate_diff(repository_id, commit_id1, commit_id2):
         reference = retrieve(adapter, commit_id1)
         challenger = retrieve(adapter, commit_id2)
         if not reference or not challenger:
-            return "<h1>Huh-oh</h1><p>Sorry, no data found.</p>"
+            abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
         delta = HtmlReporterDelta(reference, challenger)
         return delta.generate()
 

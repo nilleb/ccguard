@@ -248,7 +248,7 @@ class WebAdapter(ReferenceAdapter):
                 p=self, commit_id=commit_id
             )
         )
-        return r.content.decode("utf-8")
+        return r.content
 
     def persist(self, commit_id: str, data: bytes):
         if not data or not isinstance(data, bytes):
@@ -267,13 +267,18 @@ class WebAdapter(ReferenceAdapter):
         )
 
     def dump(self) -> list:
-        r = requests.get(
-            "{p.server}/api/v1/references/{p.repository_id}/data".format(p=self)
+        references = requests.get(
+            "{p.server}/api/v1/references/{p.repository_id}/all".format(p=self)
         )
-        if r.ok:
-            logging.debug("Response\n%r", r)
-            return r.json()
-        logging.error("Unexpected failure on dump: %s", r.text)
+        if references.ok:
+            logging.debug("References: \n%r", references)
+            data = {
+                commit_id: self.retrieve_cc_data(commit_id)
+                for commit_id in references.json()[:30]
+            }
+            return data.items()
+
+        logging.error("Unexpected failure on dump: %s", references.text)
         return []
 
 
