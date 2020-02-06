@@ -13,6 +13,7 @@ from pathlib import Path
 from datetime import datetime
 import os
 import requests
+from typing import Optional, Callable
 from pycobertura import Cobertura, CoberturaDiff, TextReporterDelta, TextReporter
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 
@@ -128,13 +129,17 @@ class ReferenceAdapter(object):
     def get_cc_commits(self) -> frozenset:
         raise NotImplementedError()
 
-    def retrieve_cc_data(self, commit_id: str) -> bytes:
+    def retrieve_cc_data(self, commit_id: str) -> Optional[str]:
         raise NotImplementedError()
 
-    def persist(self, commit_id: str, data: bytes):
+    def persist(self, commit_id: str, data: str):
         raise NotImplementedError()
 
     def dump(self) -> list:
+        raise NotImplementedError()
+
+    @staticmethod
+    def list_repositories(config: dict) -> frozenset:
         raise NotImplementedError()
 
 
@@ -156,14 +161,19 @@ class SqliteAdapter(ReferenceAdapter):
             c for ct in self.conn.execute(commits_query).fetchall() for c in ct
         )
 
-    def retrieve_cc_data(self, commit_id: str) -> bytes:
+    def retrieve_cc_data(self, commit_id: str) -> Optional[str]:
         query = 'SELECT coverage_data FROM timestamped_coverage_{repository_id}\
                 WHERE commit_id="{commit_id}"'.format(
             repository_id=self.repository_id, commit_id=commit_id
         )
-        return self.conn.execute(query).fetchone()[0]
 
-    def persist(self, commit_id: str, data: bytes):
+        result = self.conn.execute(query).fetchone()
+
+        if result:
+            return next(iter(result))
+        return None
+
+    def persist(self, commit_id: str, data: str):
         query = """INSERT INTO timestamped_coverage_{repository_id}
         (commit_id, coverage_data) VALUES (?, ?)""".format(
             repository_id=self.repository_id
@@ -175,7 +185,7 @@ class SqliteAdapter(ReferenceAdapter):
         except sqlite3.IntegrityError:
             logging.debug("This commit seems to have already been recorded.")
 
-    def dump(self):
+    def dump(self) -> list:
         query = """SELECT commit_id, coverage_data
         FROM timestamped_coverage_{repository_id}""".format(
             repository_id=self.repository_id
@@ -191,6 +201,16 @@ class SqliteAdapter(ReferenceAdapter):
     );"""
         statement = ddl.format(repository_id=self.repository_id)
         self.conn.execute(statement)
+
+    @staticmethod
+    def list_repositories(config) -> frozenset:
+        dbpath = str(config.get("sqlite.dbpath"))
+        conn = sqlite3.connect(dbpath)
+        query = """SELECT name FROM sqlite_master
+            WHERE type = "table" AND name LIKE "timestamped_coverage_%" """
+
+        tuples = conn.execute(query).fetchall()
+        return frozenset({row[0].lstrip("timestamped_coverage_") for row in tuples})
 
 
 class WebAdapter(ReferenceAdapter):
@@ -219,7 +239,7 @@ class WebAdapter(ReferenceAdapter):
             )
             return frozenset()
 
-    def retrieve_cc_data(self, commit_id: str) -> bytes:
+    def retrieve_cc_data(self, commit_id: str) -> str:
         r = requests.get(
             "{p.server}/api/v1/references/{p.repository_id}/{commit_id}/data".format(
                 p=self, commit_id=commit_id
@@ -227,7 +247,10 @@ class WebAdapter(ReferenceAdapter):
         )
         return r.content.decode("utf-8")
 
-    def persist(self, commit_id: str, data: bytes):
+    def persist(self, commit_id: str, data: str):
+        if not data:
+            return
+
         headers = {}
         if self.token:
             headers["Authorization"] = self.token
@@ -240,22 +263,30 @@ class WebAdapter(ReferenceAdapter):
             data=data,
         )
 
-    def dump(self):
-        print(requests.get)
+    def dump(self) -> list:
         r = requests.get(
             "{p.server}/api/v1/references/{p.repository_id}/data".format(p=self)
         )
-        return r.json
+        if r.ok:
+            logging.debug("Response\n%r", r)
+            return r.json()
+        logging.error("Unexpected failure on dump: %s", r.text)
+        return []
 
 
 class RedisAdapter(ReferenceAdapter):
-    def __init__(self, repository_id, config={}):
+    def __init__(self, repository_id: str, config={}):
         self.repository_id = repository_id
+        self.redis = self._build_redis(config)
+        self.redis.sadd("ccguardrepositories", repository_id)
+
+    @staticmethod
+    def _build_redis(config: dict):
         host = config.get("redis.host")
         port = config.get("redis.port")
         db = config.get("redis.db")
         password = config.get("redis.password")
-        self.redis = redis.Redis(host=host, port=port, db=db, password=password)
+        return redis.Redis(host=host, port=port, db=db, password=password)
 
     def __enter__(self):
         return self
@@ -263,27 +294,35 @@ class RedisAdapter(ReferenceAdapter):
     def __exit__(self, exc_type, exc_value, traceback):
         self.redis.close()
 
-    def get_cc_commits(self):
+    def get_cc_commits(self) -> frozenset:
         return frozenset(self.redis.hkeys(self.repository_id))
 
-    def retrieve_cc_data(self, commit_id):
+    def retrieve_cc_data(self, commit_id: str) -> str:
         return self.redis.hget(self.repository_id, commit_id)
 
-    def persist(self, commit_id, data):
+    def persist(self, commit_id: str, data: str):
         self.redis.hset(self.repository_id, commit_id, data)
         self.redis.hset(
             "{}:time".format(self.repository_id), commit_id, str(datetime.now())
         )
 
-    def dump(self):
+    def dump(self) -> list:
         return self.redis.hgetall(self.repository_id)
 
+    @staticmethod
+    def list_repositories(config: dict) -> frozenset:
+        redis = RedisAdapter._build_redis(config)
+        return redis.smembers("ccguardrepositories")
 
-def determine_parent_commit(db_commits: frozenset, iter_callable: callable) -> str:
+
+def determine_parent_commit(
+    db_commits: frozenset, iter_callable: Callable
+) -> Optional[str]:
     for commits_chunk in iter_callable():
         for commit in commits_chunk:
             if commit in db_commits:
                 return commit
+    return None
 
 
 def persist(
@@ -537,9 +576,12 @@ def main():
             logging.info("Retrieving data for reference commit %s.", commit_id)
             cc_reference_data = adapter.retrieve_cc_data(commit_id)
             logging.debug("Reference data: %r", cc_reference_data)
-            reference_fd = io.StringIO(cc_reference_data)
-            reference = Cobertura(reference_fd, source=source)
-            diff = CoberturaDiff(reference, challenger)
+            if cc_reference_data:
+                reference_fd = io.StringIO(cc_reference_data)
+                reference = Cobertura(reference_fd, source=source)
+                diff = CoberturaDiff(reference, challenger)
+            else:
+                logging.error("No data for the selected reference.")
         else:
             logging.warning("No reference code coverage data found.")
 

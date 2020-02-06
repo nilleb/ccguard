@@ -80,7 +80,7 @@ def test_configuration():
     assert dbpath != dbpath_override
 
 
-def adapter_scenario(adapter):
+def adapter_scenario(adapter: ccguard.ReferenceAdapter):
     commits = adapter.get_cc_commits()
     adapter.persist("one", "<coverage>1</coverage>")
     adapter.persist("two", "<coverage>2</coverage>")
@@ -95,6 +95,7 @@ def adapter_scenario(adapter):
     assert "3" in data
     data = adapter.dump()
     assert len(data) == 3
+    assert not adapter.retrieve_cc_data("not found")
     for commit_id, reference in data:
         assert isinstance(commit_id, str)
         assert "<coverage>" in reference

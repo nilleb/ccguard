@@ -12,3 +12,4 @@ diff.html
 ccguard.db
 venv
 notes
+.mypy_cache
