@@ -3,7 +3,9 @@
 ## Limitations
 
 At the moment, [CircleCI does not expose the base branch of the PR being processed](https://ideas.circleci.com/ideas/CCI-I-894).
-ccguard assumes then that the base branch is `origin/master`, and determines which reference to use on the base of the common history between `HEAD` and `origin/master`. If you wish to use a different base branch, you can use the parameter `--target-branch`. Ping me whenever the idea gets approved or you have a better idea about how to proceed.
+ccguard assumes then that the base branch is `origin/master`, and determines which reference to use on the base of the common history between `HEAD` and `origin/master`.
+As pointed out by a comment on the Idea, a transitory solution would be to use [this orb](https://github.com/NarrativeScience/circleci-orb-ghpr), specifying `--target-branch ${GITHUB_PR_BASE_BRANCH:-origin/master}`. The two sample workflows include it.
+Otherwise, you could adopt a more aggressive behavior `--target-branch HEAD` that compares the current CC to the previous commit.
 
 ## Common
 
@@ -44,7 +46,7 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
             GO111MODULE=on go test -coverprofile coverage.txt -covermode=count -coverpkg=github.com/nilleb/fsevents/... ./...
             gocover-cobertura < coverage.txt > coverage.xml
             source /tmp/workspace/env/bin/activate
-            ccguard --adapter web coverage.xml
+            ccguard --adapter web coverage.xml --target-branch ${GITHUB_PR_BASE_BRANCH:-origin/master}
 ```
 
 ## python workflow
@@ -57,5 +59,5 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
             venv/bin/black --check ccguard/*.py
             venv/bin/flake8 ccguard/*.py
             venv/bin/pytest --cov-report xml --cov ccguard
-            venv/bin/python ccguard/ccguard.py --html coverage.xml --adapter web
+            venv/bin/python ccguard/ccguard.py --html coverage.xml --adapter web --target-branch ${GITHUB_PR_BASE_BRANCH:-origin/master}
 ```
