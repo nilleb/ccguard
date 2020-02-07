@@ -27,7 +27,7 @@ you can retrieve the data collected by ccguard, periodically, with the command
 # via the environment variable
 export CCGUARD_SERVER_ADDRESS=http://ccguard_server:17132
 # or using the .ccguard.config.json
-
+echo '{"ccguard.server.address":"https://ccguard.domain.com"}' > ~/.ccguard.config.json
 # no token required to retrieve the coverage data
 # retrieve the data (requires at least ccguard 0.4)
 ccguard_sync web sqlite

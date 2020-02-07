@@ -1,5 +1,10 @@
 # How to integrate ccguard in your CircleCI job
 
+## Limitations
+
+At the moment, [CircleCI does not expose the base branch of the PR being processed](https://ideas.circleci.com/ideas/CCI-I-894).
+ccguard assumes then that the base branch is `origin/master`, and determines which reference to use on the base of the common history between `HEAD` and `origin/master`. If you wish to use a different base branch, you can use the parameter `--target-branch`. Ping me whenever the idea gets approved or you have a better idea about how to proceed.
+
 ## Common
 
 Set two environment variables

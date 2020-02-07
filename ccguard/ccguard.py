@@ -359,7 +359,7 @@ def parse_args(args=None):
         "--target-branch",
         dest="target_branch",
         help="the branch to which this code will be merged (default: master)",
-        default="master",
+        default="origin/master",
     )
     parser.add_argument(
         "--debug",
