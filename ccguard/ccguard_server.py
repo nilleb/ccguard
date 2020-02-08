@@ -26,8 +26,17 @@ def check_auth():
 def home():
     return (
         "<h1>CCGuard Server</h1>"
-        '<p>A <a href="https://github.com/nilleb/ccguard">CCGuard</a> '
-        "prototype API for mananing code coverage reports.</p>"
+        '<p>The <a href="{}">CCGuard</a> prototype API.</p>'
+        "<p>CCGuard allows you to upload code coverage reports,"
+        "list and download the past reports.</p>"
+        '<p>Please read <a href="{}">the documentation</a>about'
+        "how to setup your CircleCI workflow.</p>"
+        "<p>Contact the owner of this server (me at nilleb dot com)"
+        "in order to get an access token.</p>"
+    ).format(
+        "https://github.com/nilleb/ccguard",
+        "https://github.com/nilleb/ccguard/blob/master/"
+        "docs/how%20to%20integrate%20ccguard%20in%20your%20CircleCI%20job.md",
     )
 
 
