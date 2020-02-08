@@ -6,4 +6,4 @@ export ccguard_token=aaaa
 cd $repository
 ccguard --adapter web coverage.xml
 ccguard_log
-ccguard_sync
+ccguard_sync web default
