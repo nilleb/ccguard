@@ -164,9 +164,11 @@ class SqliteAdapter(ReferenceAdapter):
         self.conn.close()
 
     def get_cc_commits(self) -> frozenset:
-        commits_query = "SELECT commit_id FROM timestamped_coverage_{repository_id}".format(
-            repository_id=self.repository_id
-        )
+        commits_query = (
+            "SELECT commit_id "
+            "FROM timestamped_coverage_{repository_id} "
+            "ORDER BY collected_at DESC"
+        ).format(repository_id=self.repository_id)
         return frozenset(
             c for ct in self.conn.execute(commits_query).fetchall() for c in ct
         )
