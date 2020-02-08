@@ -4,6 +4,7 @@ import io
 import argparse
 import json
 import logging
+import sys
 import shlex
 import subprocess
 import sqlite3
@@ -22,6 +23,14 @@ HOME = Path.home()
 DB_FILE_NAME = ".ccguard.db"
 CONFIG_FILE_NAME = ".ccguard.config.json"
 
+KNOWN_ADAPTERS = {
+    "web": "WebAdapter",
+    "redis": "RedisAdapter",
+    "sqlite": "SqliteAdapter",
+    "default": "SqliteAdapter",
+}
+
+
 DEFAULT_CONFIGURATION = {
     "redis.host": "localhost",
     "redis.port": 6379,
@@ -31,6 +40,7 @@ DEFAULT_CONFIGURATION = {
     "threshold.tolerance": 0,
     "threshold.hard-minimum": -1,
     "sqlite.dbpath": HOME.joinpath(DB_FILE_NAME),
+    "known.adapters": KNOWN_ADAPTERS,
 }
 
 
@@ -401,27 +411,13 @@ def parse_args(args=None):
     return parser.parse_args(args)
 
 
+def str_to_class(classname):
+    return getattr(sys.modules[__name__], classname)
+
+
 def adapter_factory(adapter, config):
-    if adapter:
-        if adapter == "sqlite":
-            adapter_class = SqliteAdapter
-        if adapter == "redis":
-            adapter_class = RedisAdapter
-        if adapter == "web":
-            adapter_class = WebAdapter
-
-        if adapter_class:
-            return adapter_class
-
-    if config.get("adapter.class", None) == "redis":
-        adapter_class = RedisAdapter
-    elif config.get("adapter.class", None) == "web":
-
-        adapter_class = WebAdapter
-    else:
-        adapter_class = SqliteAdapter
-
-    return adapter_class
+    selected = adapter or config.get("adapter.class", None) or "default"
+    return str_to_class(KNOWN_ADAPTERS[selected])
 
 
 def iter_callable(git, ref):
