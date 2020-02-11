@@ -27,11 +27,11 @@ def home():
     return (
         "<h1>CCGuard Server</h1>"
         '<p>The <a href="{}">CCGuard</a> prototype API.</p>'
-        "<p>CCGuard allows you to upload code coverage reports,"
+        "<p>CCGuard allows you to upload code coverage reports, "
         "list and download the past reports.</p>"
-        '<p>Please read <a href="{}">the documentation</a>about'
+        '<p>Please read <a href="{}">the documentation</a> about '
         "how to setup your CircleCI workflow.</p>"
-        "<p>Contact the owner of this server (me at nilleb dot com)"
+        "<p>Contact the owner of this server (me at nilleb dot com) "
         "in order to get an access token.</p>"
     ).format(
         "https://github.com/nilleb/ccguard",
