@@ -15,8 +15,10 @@ from datetime import datetime
 import os
 import requests
 from typing import Optional, Callable
+from contextlib import contextmanager
 from pycobertura import Cobertura, CoberturaDiff, TextReporterDelta, TextReporter
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
+from pycobertura.filesystem import FileSystem
 
 
 HOME = Path.home()
@@ -68,6 +70,57 @@ def get_output(command, working_folder=None):
     except OSError:
         logging.error("Command being executed: {}".format(command))
         raise
+
+
+class GitFileSystem(FileSystem):
+    def __init__(self, repo_folder, commit_id=None):
+        self.repository = repo_folder
+        self.commit_id = commit_id
+        self.repository_root = GitAdapter(repo_folder).get_root_path()
+        self.prefix = self.repository.replace(self.repository_root, "").lstrip("/")
+
+    def real_filename(self, filename):
+        return "{p.commit_id}:{p.prefix}/{filename}".format(p=self, filename=filename)
+
+    def has_file(self, filename):
+        command = "git --no-pager show {}".format(self.real_filename(filename))
+        return_code = subprocess.call(
+            command,
+            cwd=self.repository,
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        logging.debug("%s: %d", command, return_code)
+        return not bool(return_code)
+
+    @contextmanager
+    def open(self, filename):
+        """
+        Yield a file-like object for file `filename`.
+
+        This function is a context manager.
+        """
+        filename = self.real_filename(filename)
+
+        try:
+            output = get_output(
+                "git --no-pager show {}".format(filename), self.repository
+            )
+        except Exception:
+            raise self.FileNotFound(filename)
+
+        yield io.StringIO(output)
+
+
+class VersionedCobertura(Cobertura):
+    def __init__(self, report, source=None, commit_id=None):
+        super().__init__(report, source=source)
+        if source is None:
+            if isinstance(report, str):
+                # get the directory in which the coverage file lives
+                source = os.path.dirname(report)
+        self.filesystem = GitFileSystem(source, commit_id=commit_id)
 
 
 class GitAdapter(object):
@@ -691,7 +744,9 @@ def main():
                 reference_fd = io.BytesIO(cc_reference_data)
                 normalize_report_paths(reference_fd, source)
                 reference_fd.seek(0, 0)
-                reference = Cobertura(reference_fd, source=source)
+                reference = VersionedCobertura(
+                    reference_fd, source=source, commit_id=commit_id
+                )
                 diff = CoberturaDiff(reference, challenger)
             else:
                 logging.error("No data for the selected reference.")
