@@ -555,6 +555,55 @@ def detect_source(report, repository_path="."):
     return next(iter(paths))
 
 
+def normalize_report_paths(report, repository_root):
+    tree = ET.parse(report)
+    xml = tree.getroot()
+
+    if xml.xpath('/coverage/sources/source[@class="ccguard-meta-sources-root"]'):
+        logging.debug("The report has already been processed.")
+        return None
+
+    _normalize_report_paths(xml, repository_root)
+
+    tree.write(report)
+    return tree.getroot()
+
+
+def _normalize_report_paths(xml, repository_root):
+    sources = xml.xpath("/coverage/sources/source/text()")
+    classes = xml.xpath("packages/package/classes/class")
+
+    for klass in classes:
+        filename = klass.attrib["filename"]
+        possible_paths = [
+            Path(source).joinpath(filename)
+            for source in sources
+            if Path(source).joinpath(filename).exists()
+        ]
+
+        if not possible_paths:
+            logging.warning(
+                "The file %s is not anymore present. Its path will be guessed.",
+                filename,
+            )
+            # should check the VersionedCobertura GitFileSystem
+            possible_paths = [Path(source).joinpath(filename) for source in sources]
+
+        abs_file_path = next(iter(possible_paths))
+        relative_to_root = str(abs_file_path).replace(repository_root, "").lstrip("/")
+        logging.debug("%s -> %s (%s)", abs_file_path, relative_to_root, repository_root)
+        klass.attrib["filename"] = relative_to_root
+
+    xml.xpath("/coverage/sources")[0].append(
+        ET.XML(
+            '<source class="ccguard-meta-sources-root">{}</source>'.format(
+                repository_root
+            )
+        )
+    )
+    return xml
+
+
 def main():
     args = parse_args()
 
@@ -564,7 +613,8 @@ def main():
     git = GitAdapter(args.repository)
     repository_id = git.get_repository_id()
 
-    source = detect_source(args.report, args.repository)
+    source = git.get_root_path()
+    normalize_report_paths(args.report, source)
 
     diff, reference = None, None
     challenger = Cobertura(args.report, source=source)
@@ -587,6 +637,8 @@ def main():
             logging.debug("Reference data: %r", cc_reference_data)
             if cc_reference_data:
                 reference_fd = io.BytesIO(cc_reference_data)
+                normalize_report_paths(reference_fd, source)
+                reference_fd.seek(0, 0)
                 reference = Cobertura(reference_fd, source=source)
                 diff = CoberturaDiff(reference, challenger)
             else:
