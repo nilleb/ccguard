@@ -255,9 +255,3 @@ def test_determine_parent_commit():
 def test_get_root_path():
     current_folder = os.path.dirname(__file__)
     assert current_folder.startswith(ccguard.GitAdapter(".").get_root_path())
-
-
-def test_detect_source():
-    assert "/Users/ivo/dev/ccguard/ccguard" == ccguard.detect_source(
-        "ccguard/test_data/sample_coverage.xml"
-    )
