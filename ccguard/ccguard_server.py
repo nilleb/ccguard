@@ -13,11 +13,11 @@ app.config["DEBUG"] = True
 
 
 def authenticated(func):
-    def inner():
+    def inner(*args, **kwargs):
         halt = check_auth()
         if halt:
             abort(*halt)
-        return func()
+        return func(*args, **kwargs)
 
     # Renaming the function name:
     inner.__name__ = func.__name__
