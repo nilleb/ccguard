@@ -28,6 +28,7 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
           name: Prepare unit tests environment
           command: |
             go get github.com/t-yuki/gocover-cobertura
+            sudo apt-get update
             sudo apt install python3-pip python3-venv python3-wheel
             python3 -m venv /tmp/workspace/env --system-site-packages
             /tmp/workspace/env/bin/pip install ccguard
@@ -55,7 +56,9 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
       - run:
           name: run build workflow
           command: |
+            python3 -m venv venv
             . venv/bin/activate
+            pip install black flake8 pytest pytest-cov ccguard
             venv/bin/black --check ccguard/*.py
             venv/bin/flake8 ccguard/*.py
             venv/bin/pytest --cov-report xml --cov ccguard
