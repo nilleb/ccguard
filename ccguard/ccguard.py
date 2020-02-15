@@ -189,14 +189,18 @@ class SqliteAdapter(ReferenceAdapter):
 
     def _update_count(self, commit_id):
         query = (
-            "INSERT INTO retrieved_coverage_{repository_id} "
+            "INSERT OR IGNORE INTO retrieved_coverage_{repository_id} "
             "(commit_id) VALUES (?) "
-            "ON CONFLICT (commit_id) "
-            "DO UPDATE SET count=count+1"
         ).format(repository_id=self.repository_id,)
         data_tuple = (commit_id,)
+        query2 = (
+            "UPDATE retrieved_coverage_{repository_id} "
+            "SET count = count + 1 WHERE commit_id = '{commit_id}';"
+        ).format(repository_id=self.repository_id, commit_id=commit_id)
+        logging.error(query2)
         try:
             self.conn.execute(query, data_tuple)
+            self.conn.execute(query2)
             self.conn.commit()
         except sqlite3.IntegrityError:
             logging.debug("This commit seems to have already been recorded.")
@@ -208,7 +212,6 @@ class SqliteAdapter(ReferenceAdapter):
         query = (
             "INSERT INTO timestamped_coverage_{repository_id} "
             "(commit_id, coverage_data) VALUES (?, ?) "
-            "ON CONFLICT DO NOTHING "
         ).format(repository_id=self.repository_id)
         data_tuple = (commit_id, data)
         try:
