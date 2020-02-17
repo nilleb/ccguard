@@ -84,7 +84,7 @@ def parse_args(args=None):
     return parser.parse_args(args)
 
 
-def main(args):
+def main(args=None, logging_function=print):
     args = parse_args(args)
 
     if args.debug:
@@ -96,7 +96,7 @@ def main(args):
     for ac in detailed_references(
         repo_folder=args.repository, limit=args.limit, adapter_class=adapter_class
     ):
-        print(ac)
+        logging_function(ac)
 
 
 if __name__ == "__main__":
