@@ -440,26 +440,46 @@ def persist(
         logging.info("Data for commit %s persisted successfully.", current_commit)
 
 
-def parse_args(args=None):
-    parser = argparse.ArgumentParser(
-        description="You can only improve! Compare Code Coverage and prevent regressions."
-    )
+def parse_common_args(args=None, parser=None):
+    if not parser:
+        parser = argparse.ArgumentParser(
+            description=(
+                "You can only improve! Compare Code Coverage and prevent regressions."
+            )
+        )
 
-    parser.add_argument("report", help="the coverage report for the current commit ID")
     parser.add_argument(
-        "--repository", dest="repository", help="the repository to analyze", default="."
-    )
-    parser.add_argument(
-        "--target-branch",
-        dest="target_branch",
-        help="the branch to which this code will be merged (default: master)",
-        default="origin/master",
+        "--adapter",
+        help="Choose the adapter to use (choices: sqlite or redis)",
+        dest="adapter",
     )
     parser.add_argument(
         "--debug",
         dest="debug",
         help="whether to print debug messages",
         action="store_true",
+    )
+    parser.add_argument(
+        "--repository", dest="repository", help="the repository to analyze", default="."
+    )
+
+
+def parse_args(args=None, parser=None):
+    if not parser:
+        parser = argparse.ArgumentParser(
+            description=(
+                "You can only improve! Compare Code Coverage and prevent regressions."
+            )
+        )
+
+    parse_common_args(args, parser)
+
+    parser.add_argument("report", help="the coverage report for the current commit ID")
+    parser.add_argument(
+        "--target-branch",
+        dest="target_branch",
+        help="the branch to which this code will be merged (default: master)",
+        default="origin/master",
     )
     parser.add_argument(
         "--html",
@@ -474,17 +494,11 @@ def parse_args(args=None):
         action="store_true",
     )
     parser.add_argument(
-        "--adapter",
-        dest="adapter",
-        help="Choose the adapter to use (choices: sqlite or redis)",
-    )
-    parser.add_argument(
         "--tolerance",
         type=int,
         dest="tolerance",
         help="Define a tolerance (percentage).",
     )
-
     parser.add_argument(
         "--hard-minimum",
         type=int,
@@ -614,7 +628,7 @@ def print_diff_message(
         )
 
 
-def print_delta_report(reference, challenger, log_function=print, report_file=None):
+def print_delta_report(reference, challenger, report_file=None, log_function=print):
     delta = TextReporterDelta(reference, challenger)
     log_function(delta.generate())
 

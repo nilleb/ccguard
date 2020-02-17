@@ -10,6 +10,8 @@ setuptools.setup(
         "console_scripts": [
             "ccguard=ccguard.ccguard:main",
             "ccguard_log=ccguard.ccguard_log:main",
+            "ccguard_show=ccguard.ccguard_show:main",
+            "ccguard_diff=ccguard.ccguard_diff:main",
             "ccguard_sync=ccguard.ccguard_sync:main",
             "ccguard_server=ccguard.ccguard_server:main",
         ]

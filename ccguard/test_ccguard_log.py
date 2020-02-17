@@ -41,10 +41,6 @@ def test_detailed_references():
         assert str(ref) == repr(ref)
 
 
-def test_list_references():
-    ccguard_log.list_references()
-
-
 def test_parse_no_args():
     args = ccguard_log.parse_args([])
     assert args.repository == "."
