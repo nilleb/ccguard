@@ -260,7 +260,7 @@ class SqliteAdapter(ReferenceAdapter):
 
     def persist(self, commit_id: str, data: bytes):
         if not data or not isinstance(data, bytes):
-            raise Exception("Unwilling to persist invalid data.")
+            raise ValueError("Unwilling to persist invalid data.")
 
         query = (
             "INSERT INTO timestamped_coverage_{repository_id} "
@@ -346,7 +346,7 @@ class WebAdapter(ReferenceAdapter):
 
     def persist(self, commit_id: str, data: bytes):
         if not data or not isinstance(data, bytes):
-            raise Exception("Unwilling to persist invalid data.")
+            raise ValueError("Unwilling to persist invalid data.")
 
         headers = {}
         if self.token:
@@ -404,7 +404,7 @@ class RedisAdapter(ReferenceAdapter):
 
     def persist(self, commit_id: str, data: bytes):
         if not data or not isinstance(data, bytes):
-            raise Exception("Unwilling to persist invalid data.")
+            raise ValueError("Unwilling to persist invalid data.")
 
         self.redis.hset(self.repository_id, commit_id, data)
         self.redis.hset(
@@ -440,7 +440,7 @@ def persist(
         logging.info("Data for commit %s persisted successfully.", current_commit)
 
 
-def parse_common_args(args=None, parser=None):
+def parse_common_args(parser=None):
     if not parser:
         parser = argparse.ArgumentParser(
             description=(
@@ -463,6 +463,8 @@ def parse_common_args(args=None, parser=None):
         "--repository", dest="repository", help="the repository to analyze", default="."
     )
 
+    return parser
+
 
 def parse_args(args=None, parser=None):
     if not parser:
@@ -472,7 +474,7 @@ def parse_args(args=None, parser=None):
             )
         )
 
-    parse_common_args(args, parser)
+    parse_common_args(parser)
 
     parser.add_argument("report", help="the coverage report for the current commit ID")
     parser.add_argument(

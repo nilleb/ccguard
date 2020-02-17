@@ -70,6 +70,14 @@ def test_parse():
     assert args.report == "coverage.xml"
 
 
+def test_parse_common():
+    parser = ccguard.parse_common_args()
+    args = parser.parse_args(["--repository", "test", "--debug", "--adapter", "mine"])
+    assert args.debug
+    assert args.repository == "test"
+    assert args.adapter == "mine"
+
+
 def test_configuration():
     config = ccguard.configuration()
     assert config
@@ -112,6 +120,11 @@ def adapter_scenario(adapter: ccguard.ReferenceAdapter):
     adapter.persist("one", b"<coverage>1</coverage>")
     adapter.persist("two", b"<coverage>2</coverage>")
     adapter.persist("thr", b"<coverage>3</coverage>")
+    try:
+        adapter.persist("four", "a string")
+        assert False
+    except ValueError:
+        pass
     commits = adapter.get_cc_commits()
     assert len(commits) == 3
     data = adapter.retrieve_cc_data("one")
@@ -225,6 +238,13 @@ def test_has_better_coverage_failure():
     assert not ccguard.has_better_coverage(diff)
 
 
+def test_has_better_coverage_same_file():
+    ref = Cobertura("ccguard/test_data/has_better_coverage/reference-code-coverage.xml")
+    cha = Cobertura("ccguard/test_data/has_better_coverage/reference-code-coverage.xml")
+    diff = CoberturaDiff(ref, cha)
+    assert ccguard.has_better_coverage(diff)
+
+
 def test_has_better_coverage_success():
     ref = Cobertura("ccguard/test_data/has_better_coverage/reference-code-coverage.xml")
     cha = Cobertura(
@@ -247,9 +267,16 @@ def test_determine_parent_commit():
     def iter_callable():
         yield [1, 2, 3]
         yield [4, 5, 6]
-        raise Exception("we should never get here")
 
     assert 4 == ccguard.determine_parent_commit(frozenset([4, 7]), iter_callable)
+
+
+def test_determine_parent_commit_none():
+    def iter_callable():
+        yield [1, 2, 3]
+        yield [4, 5, 6]
+
+    assert not ccguard.determine_parent_commit(frozenset([7]), iter_callable)
 
 
 def test_get_root_path():

@@ -28,7 +28,7 @@ def parse_args(args=None):
     parser = argparse.ArgumentParser(
         description="Display diff between two ccguard reference coverages."
     )
-    ccguard.parse_common_args(args, parser)
+    ccguard.parse_common_args(parser)
 
     parser.add_argument(
         "commit_id",

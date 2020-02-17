@@ -71,7 +71,7 @@ def detailed_references(repo_folder=".", limit=30, adapter_class=ccguard.SqliteA
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Display ccguard reference log.")
 
-    ccguard.parse_common_args(args, parser)
+    ccguard.parse_common_args(parser)
 
     parser.add_argument(
         "-n",
