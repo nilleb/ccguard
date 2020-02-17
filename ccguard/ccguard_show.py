@@ -52,12 +52,6 @@ def main(args=None, log_function=print):
     config = ccguard.configuration(args.repository)
     adapter_class = ccguard.adapter_factory(args.adapter, config)
 
-    try:
-        first = args.commit_id[0]
-    except IndexError:
-        log_function("fatal: insufficient arguments")
-        return -1
-
     config = ccguard.configuration(args.repository)
     repo_id = ccguard.GitAdapter(args.repository).get_repository_id()
     with adapter_class(repo_id, config) as adapter:
@@ -65,7 +59,7 @@ def main(args=None, log_function=print):
 
         first_ref = None
         for ref in refs:
-            if ref.startswith(first):
+            if ref.startswith(args.commit_id):
                 first_ref = ref
                 break
 

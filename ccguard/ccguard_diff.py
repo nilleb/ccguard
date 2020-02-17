@@ -60,8 +60,8 @@ def main(args=None, log_function=print):
     try:
         first, second = args.commit_id
     except ValueError:
-        logging.error("fatal: insufficient arguments")
-        return
+        log_function("fatal: insufficient arguments")
+        return -1
 
     config = ccguard.configuration(args.repository)
     repo_id = ccguard.GitAdapter(args.repository).get_repository_id()
@@ -89,5 +89,6 @@ def main(args=None, log_function=print):
             )
         else:
             log_function("fatal: can't find matching references.")
+            return -1
 
-    return
+    return 0

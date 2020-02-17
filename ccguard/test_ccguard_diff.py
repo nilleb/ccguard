@@ -33,3 +33,10 @@ def test_ccguard_diff():
         assert commit2 in lines[0]
         assert "-3.00%" in lines[-1]
         assert Path("diff-abcd-dcba.html").is_file()
+
+
+def test_ccguard_diff_not_enough_arguments():
+    lines = []
+    val = ccguard_diff.main(args=[], log_function=lambda x: lines.append(x))
+    assert val
+    assert "fatal: insufficient arguments" in lines
