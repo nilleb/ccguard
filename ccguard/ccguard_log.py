@@ -32,7 +32,7 @@ class AnnotatedCommit(git.Commit):
     @property
     def ccrate_pretty(self):
         if self.has_ref:
-            return "({:.2f}%) ".format(self.ccrate * 100)
+            return "({:5.2f}%) ".format(self.ccrate * 100)
         else:
             return "{:9}".format("")
 

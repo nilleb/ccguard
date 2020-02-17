@@ -1,5 +1,6 @@
-import ccguard
+import logging
 import argparse
+import ccguard
 
 
 def transfer(
@@ -22,13 +23,17 @@ def prepare_inner_callable(commit_id):
     if commit_id:
 
         def inner_callable(source_adapter, dest_adapter):
+            logging.debug("Start retrieving data...")
             data = source_adapter.retrieve_cc_data(commit_id=commit_id)
+            logging.debug("- %s", commit_id)
             dest_adapter.persist(commit_id, data)
 
     else:
 
         def inner_callable(source_adapter, dest_adapter):
+            logging.debug("Start retrieving data...")
             for commit_id, data in source_adapter.dump():
+                logging.debug("- %s", commit_id)
                 dest_adapter.persist(commit_id, data)
 
     return inner_callable
@@ -49,6 +54,12 @@ def parse_args(args=None):
         "--repository", dest="repository", help="the repository to analyze", default="."
     )
     parser.add_argument(
+        "--debug",
+        dest="debug",
+        help="whether to print debug messages",
+        action="store_true",
+    )
+    parser.add_argument(
         "--commit_id", dest="commit_id", help="Limit the transfer to this commit only",
     )
 
@@ -57,6 +68,9 @@ def parse_args(args=None):
 
 def main(args=None):
     args = parse_args(args)
+
+    if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
 
     config = ccguard.configuration(args.repository)
     source_class = ccguard.adapter_factory(args.source_adapter, config)
