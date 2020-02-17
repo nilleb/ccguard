@@ -725,8 +725,8 @@ def _normalize_report_paths(xml, repository_root):
     return xml
 
 
-def main():
-    args = parse_args()
+def main(args=None):
+    args = parse_args(args)
 
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
