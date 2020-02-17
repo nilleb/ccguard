@@ -38,8 +38,8 @@ sudo nginx -t
 sudo systemctl restart nginx
 
 if [ "$use_ssl" == "true" ]; then
-    curl -L https://raw.githubusercontent.com/nilleb/ccguard/master/docs/server-setup/nginx-ssl --output nginx-ssl
-    printf "%s\n" "$(apply_shell_expansion nginx-ssl)" > nginx-ssl
+    curl -L https://raw.githubusercontent.com/nilleb/ccguard/master/docs/server-setup/nginx-ssl --output nginx-ssl.template
+    printf "%s\n" "$(apply_shell_expansion nginx-ssl.template)" > nginx-ssl
 
     sudo apt-get install software-properties-common
     yes "" | sudo add-apt-repository ppa:certbot/certbot

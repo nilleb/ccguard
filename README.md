@@ -1,6 +1,6 @@
 # ccguard
 
-[![CircleCI](https://circleci.com/gh/nilleb/ccguard.svg?style=svg)](https://circleci.com/gh/nilleb/ccguard)
+[![CircleCI](https://circleci.com/gh/nilleb/ccguard.svg?style=svg)](https://circleci.com/gh/nilleb/ccguard)[![PyPI version](https://badge.fury.io/py/ccguard.svg)](https://badge.fury.io/py/ccguard)
 
 you can only improve! :-)
 
@@ -16,6 +16,14 @@ ccguard compares the current code coverage to past code coverage. ccguard fails 
 - git
 
 Should work on both python2 and python3. python2 is not anymore supported.
+
+## how should you use this software
+
+- setup the server
+- define your code coverage exclusions and inclusions (otherwise than in ccguard)
+- setup the CI workflow so that ccguard can ingest the code coverage report and send it to the server and ensures that the coverage doesn't worsen
+- download reports on your computer using ccguard_sync
+- inspect the log, the coverage and the past reports with ccguard_log
 
 ## welcome beta testers: setup
 

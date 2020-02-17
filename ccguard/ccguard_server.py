@@ -12,6 +12,18 @@ app = flask.Flask(__name__)
 app.config["DEBUG"] = True
 
 
+def authenticated(func):
+    def inner(*args, **kwargs):
+        halt = check_auth()
+        if halt:
+            abort(*halt)
+        return func(*args, **kwargs)
+
+    # Renaming the function name:
+    inner.__name__ = func.__name__
+    return inner
+
+
 def check_auth():
     token = app.config.get("TOKEN", None)
     if token:
@@ -41,11 +53,8 @@ def home():
 
 
 @app.route("/api/v1/repositories/debug", methods=["GET"])
+@authenticated
 def api_repositories_debug():
-    halt = check_auth()
-    if halt:
-        abort(*halt)
-
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     repositories = adapter_class.list_repositories(config)
@@ -72,11 +81,8 @@ def dump_data(repository_id):
 
 
 @app.route("/api/v1/references/<string:repository_id>/debug", methods=["GET"])
+@authenticated
 def api_references_debug(repository_id):
-    halt = check_auth()
-    if halt:
-        abort(*halt)
-
     dump = dump_data(repository_id)
 
     output = []
@@ -110,11 +116,8 @@ def api_reference_download_data(repository_id, commit_id):
     "/api/v1/references/<string:repository_id>/<string:commit_id>/debug",
     methods=["GET"],
 )
+@authenticated
 def api_reference_download_data_debug(repository_id, commit_id):
-    halt = check_auth()
-    if halt:
-        abort(*halt)
-
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
@@ -129,11 +132,8 @@ def api_reference_download_data_debug(repository_id, commit_id):
 @app.route(
     "/api/v1/references/<string:repository_id>/<string:commit_id>/data", methods=["PUT"]
 )
+@authenticated
 def api_upload_reference(repository_id, commit_id):
-    halt = check_auth()
-    if halt:
-        abort(*halt)
-
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
@@ -146,7 +146,7 @@ def api_upload_reference(repository_id, commit_id):
 
 
 @app.route("/web/report/<string:repository_id>/<string:commit_id>", methods=["GET"])
-def api_generate_report(repository_id, commit_id):
+def web_generate_report(repository_id, commit_id):
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
@@ -171,7 +171,7 @@ def retrieve(adapter, commit_id, source="ccguard"):
     "/web/diff/<string:repository_id>/<string:commit_id1>..<string:commit_id2>",
     methods=["GET"],
 )
-def api_generate_diff(repository_id, commit_id1, commit_id2):
+def web_generate_diff(repository_id, commit_id1, commit_id2):
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:

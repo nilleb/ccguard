@@ -1,4 +1,4 @@
-from . import ccguard
+import ccguard
 import argparse
 
 
