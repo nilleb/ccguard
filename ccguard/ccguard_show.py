@@ -1,22 +1,23 @@
 import io
+import sys
 import argparse
 import ccguard
 import logging
 from pycobertura import Cobertura
 
 
-def print_report(commit_id, adapter, repository=".", pattern=None):
+def print_report(commit_id, adapter, repository=".", pattern=None, log_function=print):
     dest = (pattern or "cc-{}.html").format(commit_id)
-    print(
+    log_function(
         "Printing the coverage report for the commit {} to {}".format(commit_id, dest)
     )
 
     data = adapter.retrieve_cc_data(commit_id)
     reference_fd = io.BytesIO(data)
-    source = ccguard.detect_source(reference_fd, repository)
+    source = ccguard.GitAdapter(repository).get_root_path()
     fdata = Cobertura(reference_fd, source=source)
 
-    ccguard.print_cc_report(fdata, report_file=dest)
+    ccguard.print_cc_report(fdata, report_file=dest, log_function=log_function)
 
 
 def parse_args(args=None):
@@ -42,7 +43,7 @@ def parse_args(args=None):
     return parser.parse_args(args)
 
 
-def main(args=None):
+def main(args=None, log_function=print):
     args = parse_args(args)
 
     if args.debug:
@@ -54,8 +55,8 @@ def main(args=None):
     try:
         first = args.commit_id[0]
     except IndexError:
-        logging.error("fatal: insufficient arguments")
-        return
+        log_function("fatal: insufficient arguments")
+        return -1
 
     config = ccguard.configuration(args.repository)
     repo_id = ccguard.GitAdapter(args.repository).get_repository_id()
@@ -74,8 +75,14 @@ def main(args=None):
                 adapter=adapter,
                 repository=args.repository,
                 pattern=args.report_file,
+                log_function=log_function,
             )
         else:
-            print("fatal: can't find matching references.")
+            log_function("fatal: can't find matching references.")
+            return -1
 
-    return
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

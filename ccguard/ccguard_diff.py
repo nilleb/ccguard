@@ -5,21 +5,23 @@ import logging
 from pycobertura import Cobertura
 
 
-def print_diff_report(first_ref, second_ref, adapter, repository=".", pattern=None):
+def print_diff_report(
+    first_ref, second_ref, adapter, repository=".", pattern=None, log_function=print
+):
     dest = (pattern or "diff-{}-{}.html").format(first_ref, second_ref)
     fdata = adapter.retrieve_cc_data(first_ref)
     sdata = adapter.retrieve_cc_data(second_ref)
     first_fd = io.BytesIO(fdata)
     second_fd = io.BytesIO(sdata)
-    source = ccguard.detect_source(first_fd, repository)
-    print(
+    source = ccguard.GitAdapter(repository).get_root_path()
+    log_function(
         "Printing the diff report for the commits {} and {} to {}".format(
             first_ref, second_ref, dest
         )
     )
     fcc = Cobertura(first_fd, source=source)
     scc = Cobertura(second_fd, source=source)
-    ccguard.print_delta_report(fcc, scc, report_file=dest)
+    ccguard.print_delta_report(fcc, scc, report_file=dest, log_function=log_function)
 
 
 def parse_args(args=None):
@@ -46,7 +48,7 @@ def parse_args(args=None):
     return parser.parse_args(args)
 
 
-def main(args=None):
+def main(args=None, log_function=print):
     args = parse_args(args)
 
     if args.debug:
@@ -70,7 +72,6 @@ def main(args=None):
 
         for ref in refs:
             if first_ref and second_ref:
-                logging.info("Building diff between %s and %s", first_ref, second_ref)
                 break
             if ref.startswith(first):
                 first_ref = ref
@@ -84,8 +85,9 @@ def main(args=None):
                 adapter=adapter,
                 repository=args.repository,
                 pattern=args.report_file,
+                log_function=log_function,
             )
         else:
-            print("fatal: can't find matching references.")
+            log_function("fatal: can't find matching references.")
 
     return
