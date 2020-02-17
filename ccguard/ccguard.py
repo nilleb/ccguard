@@ -179,20 +179,40 @@ class SqliteAdapter(ReferenceAdapter):
             repository_id=self.repository_id, commit_id=commit_id
         )
 
+        self._update_count(commit_id)
+
         result = self.conn.execute(query).fetchone()
 
         if result:
             return next(iter(result))
         return None
 
+    def _update_count(self, commit_id):
+        query = (
+            "INSERT OR IGNORE INTO retrieved_coverage_{repository_id} "
+            "(commit_id) VALUES (?) "
+        ).format(repository_id=self.repository_id,)
+        data_tuple = (commit_id,)
+        query2 = (
+            "UPDATE retrieved_coverage_{repository_id} "
+            "SET count = count + 1 WHERE commit_id = '{commit_id}';"
+        ).format(repository_id=self.repository_id, commit_id=commit_id)
+        logging.error(query2)
+        try:
+            self.conn.execute(query, data_tuple)
+            self.conn.execute(query2)
+            self.conn.commit()
+        except sqlite3.IntegrityError:
+            logging.debug("This commit seems to have already been recorded.")
+
     def persist(self, commit_id: str, data: bytes):
         if not data or not isinstance(data, bytes):
             raise Exception("Unwilling to persist invalid data.")
 
-        query = """INSERT INTO timestamped_coverage_{repository_id}
-        (commit_id, coverage_data) VALUES (?, ?)""".format(
-            repository_id=self.repository_id
-        )
+        query = (
+            "INSERT INTO timestamped_coverage_{repository_id} "
+            "(commit_id, coverage_data) VALUES (?, ?) "
+        ).format(repository_id=self.repository_id)
         data_tuple = (commit_id, data)
         try:
             self.conn.execute(query, data_tuple)
@@ -208,12 +228,21 @@ class SqliteAdapter(ReferenceAdapter):
         return self.conn.execute(query).fetchall()
 
     def _create_table(self):
-        ddl = """CREATE TABLE IF NOT EXISTS `timestamped_coverage_{repository_id}` (
-    `commit_id` varchar(40) NOT NULL,
-    `collected_at` ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `coverage_data` BLOB NOT NULL default '',
-    PRIMARY KEY  (`commit_id`)
-    );"""
+        ddl = (
+            "CREATE TABLE IF NOT EXISTS `timestamped_coverage_{repository_id}` ("
+            "`commit_id` varchar(40) NOT NULL, "
+            "`collected_at` ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+            "`coverage_data` BLOB NOT NULL default '', "
+            "PRIMARY KEY  (`commit_id`) );"
+        )
+        statement = ddl.format(repository_id=self.repository_id)
+        self.conn.execute(statement)
+        ddl = (
+            "CREATE TABLE IF NOT EXISTS `retrieved_coverage_{repository_id}` "
+            "( `commit_id` varchar(40) NOT NULL, "
+            "`count` INT DEFAULT 1, "
+            "PRIMARY KEY  (`commit_id`) );"
+        )
         statement = ddl.format(repository_id=self.repository_id)
         self.conn.execute(statement)
 
@@ -417,7 +446,7 @@ def str_to_class(classname):
     return getattr(sys.modules[__name__], classname)
 
 
-def adapter_factory(adapter, config):
+def adapter_factory(adapter: str, config: dict) -> ReferenceAdapter:
     selected = adapter or config.get("adapter.class", None) or "default"
     return str_to_class(KNOWN_ADAPTERS[selected])
 
