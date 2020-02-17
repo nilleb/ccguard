@@ -250,7 +250,6 @@ class SqliteAdapter(ReferenceAdapter):
             "UPDATE retrieved_coverage_{repository_id} "
             "SET count = count + 1 WHERE commit_id = '{commit_id}';"
         ).format(repository_id=self.repository_id, commit_id=commit_id)
-        logging.error(query2)
         try:
             self.conn.execute(query, data_tuple)
             self.conn.execute(query2)
