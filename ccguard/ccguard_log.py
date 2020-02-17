@@ -13,13 +13,6 @@ def dump(repo_folder=".", adapter_class=ccguard.SqliteAdapter):
         return adapter.dump()
 
 
-def list_references(repo_folder=".", adapter_class=ccguard.SqliteAdapter):
-    config = ccguard.configuration(repo_folder)
-    repo_id = ccguard.GitAdapter(repo_folder).get_repository_id()
-    with adapter_class(repo_id, config) as adapter:
-        return adapter.get_cc_commits()
-
-
 class AnnotatedCommit(git.Commit):
     def __init__(self, commit, data):
         self.commit = commit
@@ -78,17 +71,8 @@ def detailed_references(repo_folder=".", limit=30, adapter_class=ccguard.SqliteA
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Display ccguard reference log.")
 
-    parser.add_argument(
-        "--adapter-class",
-        help="Choose the adapter to use (choices: sqlite or redis)",
-        dest="adapter",
-    )
-    parser.add_argument(
-        "--debug",
-        dest="debug",
-        help="whether to print debug messages",
-        action="store_true",
-    )
+    ccguard.parse_common_args(parser)
+
     parser.add_argument(
         "-n",
         dest="limit",
@@ -96,15 +80,12 @@ def parse_args(args=None):
         type=int,
         default=30,
     )
-    parser.add_argument(
-        "--repository", dest="repository", help="the repository to analyze", default="."
-    )
 
     return parser.parse_args(args)
 
 
-def main():
-    args = parse_args()
+def main(args=None, logging_function=print):
+    args = parse_args(args)
 
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -115,7 +96,7 @@ def main():
     for ac in detailed_references(
         repo_folder=args.repository, limit=args.limit, adapter_class=adapter_class
     ):
-        print(ac)
+        logging_function(ac)
 
 
 if __name__ == "__main__":

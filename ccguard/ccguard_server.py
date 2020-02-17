@@ -186,11 +186,8 @@ def web_generate_diff(repository_id, commit_id1, commit_id2):
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="ccguard web server")
 
-    parser.add_argument(
-        "--adapter-class",
-        help="Choose the adapter to use (choices: sqlite or redis)",
-        dest="adapter",
-    )
+    ccguard.parse_common_args(parser)
+
     parser.add_argument(
         "--token", dest="token", help="the access token for this server"
     )
