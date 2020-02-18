@@ -80,7 +80,10 @@ class GitFileSystem(FileSystem):
         self.prefix = self.repository.replace(self.repository_root, "").lstrip("/")
 
     def real_filename(self, filename):
-        return "{p.commit_id}:{p.prefix}/{filename}".format(p=self, filename=filename)
+        prefix = "{}/".format(self.prefix) if self.prefix else ""
+        return "{p.commit_id}:{prefix}{filename}".format(
+            prefix=prefix, p=self, filename=filename
+        )
 
     def has_file(self, filename):
         command = "git --no-pager show {}".format(self.real_filename(filename))
