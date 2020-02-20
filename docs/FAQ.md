@@ -13,3 +13,8 @@ According to the configured adapter settings:
 - SQLiteAdapter writes the reports to a local sqlite database (by default, $HOME/.ccguard.db)
 - RedisAdapter sends the reports to the configured Redis Server listening on http://localhost:6379
 - WebAdapter sends the reports to a ccguard server listening on http://localhost:5000
+
+## Hey, I have merged my two branches, where ccguard was successful, to master; and it now detects a regression
+
+Yeah, this is possible if both the branches had the same base and you merged them without rebasing.
+I would suggest you to force the rebase of your pull request before merging.
