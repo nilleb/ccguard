@@ -2,7 +2,6 @@ import io
 import argparse
 import ccguard
 import logging
-from pycobertura import Cobertura
 
 
 def print_diff_report(
@@ -19,8 +18,8 @@ def print_diff_report(
             first_ref, second_ref, dest
         )
     )
-    fcc = Cobertura(first_fd, source=source)
-    scc = Cobertura(second_fd, source=source)
+    fcc = ccguard.VersionedCobertura(first_fd, source=source, commit_id=first_ref)
+    scc = ccguard.VersionedCobertura(second_fd, source=source, commit_id=second_ref)
     ccguard.print_delta_report(fcc, scc, report_file=dest, log_function=log_function)
 
 
