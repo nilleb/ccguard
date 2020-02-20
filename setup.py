@@ -12,6 +12,7 @@ setuptools.setup(
             "ccguard_log=ccguard.ccguard_log:main",
             "ccguard_show=ccguard.ccguard_show:main",
             "ccguard_diff=ccguard.ccguard_diff:main",
+            "ccguard_convert=ccguard.ccguard_convert:main",
             "ccguard_sync=ccguard.ccguard_sync:main",
             "ccguard_server=ccguard.ccguard_server:main",
         ]
