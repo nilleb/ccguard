@@ -45,7 +45,7 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
           name: Run unit tests
           command: |
             GO111MODULE=on go test -coverprofile coverage.txt -covermode=count -coverpkg=github.com/nilleb/fsevents/... ./...
-            gocover-cobertura < coverage.txt > coverage.xml
+            ccguard_convert coverage.txt -if go -of xml -o coverage.xml
             source /tmp/workspace/env/bin/activate
             ccguard --adapter web coverage.xml --target-branch ${GITHUB_PR_BASE_BRANCH:-origin/master}
 ```
