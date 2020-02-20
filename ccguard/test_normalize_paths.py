@@ -22,7 +22,7 @@ def test_relativize_same_machine():
 
     assert report
 
-    xml = normalize_report_paths(report, sources)
+    xml = normalize_report_paths(report, sources).getroot()
 
     ccsource = xml.xpath('/coverage/sources/source[@class="ccguard-meta-sources-root"]')
     # a <source>, with a particular class has been added
@@ -54,7 +54,7 @@ def test_relativize_other_machine():
     tree.write(report)
     report.seek(0, 0)
 
-    xml = normalize_report_paths(report, sources)
+    xml = normalize_report_paths(report, sources).getroot()
 
     ccsource = xml.xpath('/coverage/sources/source[@class="ccguard-meta-sources-root"]')
     # a <source>, with a particular class has been added

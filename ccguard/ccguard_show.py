@@ -3,7 +3,14 @@ import sys
 import argparse
 import ccguard
 import logging
-from pycobertura import Cobertura
+
+
+def normalize_report_paths(reference_fd, source):
+    tree = ccguard.normalize_report_paths(reference_fd, source)
+    reference_fd.truncate()
+    tree.write(reference_fd)
+    reference_fd.seek(0, 0)
+    return reference_fd
 
 
 def print_report(commit_id, adapter, repository=".", pattern=None, log_function=print):
@@ -15,7 +22,8 @@ def print_report(commit_id, adapter, repository=".", pattern=None, log_function=
     data = adapter.retrieve_cc_data(commit_id)
     reference_fd = io.BytesIO(data)
     source = ccguard.GitAdapter(repository).get_root_path()
-    fdata = Cobertura(reference_fd, source=source)
+    reference_fd = normalize_report_paths(reference_fd, source)
+    fdata = ccguard.VersionedCobertura(reference_fd, source=source, commit_id=commit_id)
 
     ccguard.print_cc_report(fdata, report_file=dest, log_function=log_function)
 

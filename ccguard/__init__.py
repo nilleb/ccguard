@@ -8,4 +8,6 @@ from .ccguard import (  # noqa
     parse_common_args,
     print_cc_report,
     print_delta_report,
+    VersionedCobertura,
+    normalize_report_paths,
 )

@@ -652,8 +652,7 @@ def normalize_report_paths(report, repository_root):
 
     _normalize_report_paths(xml, repository_root)
 
-    tree.write(report)
-    return tree.getroot()
+    return tree
 
 
 def guess_relative_path(repository_root, abs_file_path, prefix=None):
@@ -663,7 +662,11 @@ def guess_relative_path(repository_root, abs_file_path, prefix=None):
         best_hypothesis_with_prefix = str(abs_file_path).replace(prefix, "").lstrip("/")
         guess = Path(repository_root).joinpath(best_hypothesis_with_prefix)
         if guess.exists():
-            logging.debug("The prefix %s is good.", prefix)
+            logging.debug(
+                "The prefix %s is good, hence the best guess is %s.",
+                prefix,
+                best_hypothesis_with_prefix,
+            )
             return prefix, best_hypothesis_with_prefix
 
     parts = str(abs_file_path).lstrip("/").split("/")
@@ -717,13 +720,14 @@ def _normalize_report_paths(xml, repository_root):
             if rel:
                 klass.attrib["filename"] = rel
 
-    xml.xpath("/coverage/sources")[0].append(
-        ET.XML(
-            '<source class="ccguard-meta-sources-root">{}</source>'.format(
-                repository_root
-            )
-        )
+    sources_elem = xml.xpath("/coverage/sources")
+    source_xml = '<source class="ccguard-meta-sources-root">{}</source>'.format(
+        repository_root
     )
+    if sources_elem:
+        sources_elem[0].append(ET.XML(source_xml))
+    else:
+        xml.append(ET.XML("<sources>{}</sources>".format(source_xml)))
     return xml
 
 
@@ -737,7 +741,8 @@ def main(args=None):
     repository_id = git.get_repository_id()
 
     source = git.get_root_path()
-    normalize_report_paths(args.report, source)
+    tree = normalize_report_paths(args.report, source)
+    tree.write(args.report)
 
     diff, reference = None, None
     challenger = Cobertura(args.report, source=source)
