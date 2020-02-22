@@ -170,7 +170,7 @@ class GitAdapter(object):
             files = files[:-1]
         return set(files)
 
-    def get_common_ancestor(self, base_branch="master", ref="HEAD"):
+    def get_common_ancestor(self, base_branch="origin/master", ref="HEAD"):
         command = "git merge-base {} {}".format(base_branch, ref)
         return get_output(command, working_folder=self.repository_folder).rstrip()
         # at the moment, CircleCI does not provide the name of the base|target branch
