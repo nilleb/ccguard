@@ -738,7 +738,7 @@ def _normalize_report_paths(xml, repository_root):
     return xml
 
 
-def main(args=None):
+def main(args=None, log_function=print, logging_module=logging):
     args = parse_args(args)
 
     if args.debug:
@@ -758,7 +758,9 @@ def main(args=None):
 
     with adapter_factory(args.adapter, config)(repository_id, config) as adapter:
         reference_commits = adapter.get_cc_commits()
-        logging.debug("Found the following reference commits: %r", reference_commits)
+        logging_module.debug(
+            "Found the following reference commits: %r", reference_commits
+        )
 
         common_ancestor = git.get_common_ancestor(args.target_branch)
         current_commit_id = git.get_current_commit_id()
@@ -771,9 +773,9 @@ def main(args=None):
         commit_id = determine_parent_commit(reference_commits, iter_callable(git, ref))
 
         if commit_id:
-            logging.info("Retrieving data for reference commit %s.", commit_id)
+            logging_module.info("Retrieving data for reference commit %s.", commit_id)
             cc_reference_data = adapter.retrieve_cc_data(commit_id)
-            logging.debug("Reference data: %r", cc_reference_data)
+            logging_module.debug("Reference data: %r", cc_reference_data)
             if cc_reference_data:
                 reference_fd = io.BytesIO(cc_reference_data)
                 normalize_report_paths(reference_fd, source)
@@ -783,9 +785,9 @@ def main(args=None):
                 )
                 diff = CoberturaDiff(reference, challenger)
             else:
-                logging.error("No data for the selected reference.")
+                logging_module.error("No data for the selected reference.")
         else:
-            logging.warning("No reference code coverage data found.")
+            logging_module.warning("No reference code coverage data found.")
 
         if challenger:
             print_cc_report(challenger, report_file="cc.html" if args.html else None)
@@ -793,13 +795,13 @@ def main(args=None):
             if not args.uncommitted:
                 persist(git, adapter, args.report)
         else:
-            logging.error("No recent code coverage data found.")
-
-    tolerance = args.tolerance or config.get("threshold.tolerance", 0)
-    hard_minimum = args.hard_minimum or config.get("threshold.hard-minimum", -1)
-    hard_minimum = hard_minimum * 1.0 / 100
+            logging_module.error("No recent code coverage data found.")
 
     if diff:
+        tolerance = args.tolerance or config.get("threshold.tolerance", 0)
+        hard_minimum = args.hard_minimum or config.get("threshold.hard-minimum", -1)
+        hard_minimum = hard_minimum * 1.0 / 100
+
         has_coverage_improved = has_better_coverage(
             diff, tolerance=tolerance, hard_minimum=hard_minimum
         )

@@ -1,8 +1,9 @@
 import os
 from . import ccguard
 import redis
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from pycobertura import Cobertura, CoberturaDiff
+from shutil import copyfile
 
 
 def test_get_repository_id():
@@ -282,3 +283,21 @@ def test_determine_parent_commit_none():
 def test_get_root_path():
     current_folder = os.path.dirname(__file__)
     assert current_folder.startswith(ccguard.GitAdapter(".").get_root_path())
+
+
+def test_main():
+    adapter_class = MagicMock()
+    adapter_factory = MagicMock(return_value=adapter_class)
+    with patch.object(ccguard, "adapter_factory", return_value=adapter_factory):
+        logging_module = MagicMock()
+        output = []
+        logging_module.warning = MagicMock(
+            side_effect=lambda *args: output.append(args[0] % args[1:])
+        )
+        sample_file = "ccguard/test_data/sample_coverage.xml"
+        test_file = os.path.splitext(sample_file)[0] + "-1.xml"
+        copyfile(sample_file, test_file)
+        ccguard.main(["--debug", test_file], logging_module=logging_module)
+        assert [
+            line for line in output if line == "No reference code coverage data found."
+        ]
