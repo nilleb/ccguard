@@ -8,13 +8,14 @@ def transfer(
     repo_folder=".",
     source_adapter_class=ccguard.SqliteAdapter,
     dest_adapter_class=ccguard.RedisAdapter,
+    log_function=logging.debug,
 ):
     inner_callable = prepare_inner_callable(commit_id)
     config = ccguard.configuration(repo_folder)
     repo_id = ccguard.GitAdapter(repo_folder).get_repository_id()
     with source_adapter_class(repo_id, config) as source_adapter:
         with dest_adapter_class(repo_id, config) as dest_adapter:
-            inner_callable(source_adapter, dest_adapter)
+            inner_callable(source_adapter, dest_adapter, log_function=log_function)
 
 
 def prepare_inner_callable(commit_id):
@@ -22,18 +23,18 @@ def prepare_inner_callable(commit_id):
 
     if commit_id:
 
-        def inner_callable(source_adapter, dest_adapter):
-            logging.debug("Start retrieving data...")
+        def inner_callable(source_adapter, dest_adapter, log_function=logging.debug):
+            log_function("Start retrieving data...")
             data = source_adapter.retrieve_cc_data(commit_id=commit_id)
-            logging.debug("- %s", commit_id)
+            log_function("- %s", commit_id)
             dest_adapter.persist(commit_id, data)
 
     else:
 
-        def inner_callable(source_adapter, dest_adapter):
-            logging.debug("Start retrieving data...")
+        def inner_callable(source_adapter, dest_adapter, log_function=logging.debug):
+            log_function("Start retrieving data...")
             for commit_id, data in source_adapter.dump():
-                logging.debug("- %s", commit_id)
+                log_function("- %s", commit_id)
                 dest_adapter.persist(commit_id, data)
 
     return inner_callable
@@ -66,7 +67,7 @@ def parse_args(args=None):
     return parser.parse_args(args)
 
 
-def main(args=None):
+def main(args=None, log_function=logging.debug):
     args = parse_args(args)
 
     if args.debug:
@@ -81,6 +82,7 @@ def main(args=None):
         repo_folder=args.repository,
         source_adapter_class=source_class,
         dest_adapter_class=dest_class,
+        log_function=log_function,
     )
 
 

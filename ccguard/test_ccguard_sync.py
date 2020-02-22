@@ -84,4 +84,16 @@ def test_parse_shortest():
 def test_main():
     commit = fake_commit()
     ccguard.adapter_factory = lambda a, b: mock_adapter_class(commit.hexsha)
-    ccguard_sync.main(["redis", "redis"])
+    lines = []
+    ccguard_sync.main(["redis", "redis"], log_function=lambda *x: lines.append(x))
+    assert lines
+
+
+def test_main_debug():
+    commit = fake_commit()
+    ccguard.adapter_factory = lambda a, b: mock_adapter_class(commit.hexsha)
+    lines = []
+    ccguard_sync.main(
+        ["--debug", "redis", "redis"], log_function=lambda *x: lines.append(x)
+    )
+    assert lines
