@@ -169,7 +169,7 @@ def parse_args(args=None):
 
 
 def main(args=None):
-    args = parse_args()
+    args = parse_args(args)
     xml = None
     if args.input_format == "go":
         xml = serialize(*convert_golang_report(args.report))
@@ -184,7 +184,7 @@ def main(args=None):
         else:
             write(args.output, ET.tostring(xml, pretty_print=True))
     elif args.output == "html":
-        source = ccguard.GitAdapter(os.path.dirpath(report)).get_root_path()
+        source = ccguard.GitAdapter(os.path.dirpath(args.report)).get_root_path()
         challenger = Cobertura(args.report, source=source)
         report = HtmlReporter(challenger)
         if not args.output:

@@ -23,4 +23,6 @@ def test_ccguard_show():
         assert lines
         assert commit_id in lines[0]
         assert "79.10%" in lines[-1]
-        assert Path("cc-dcba.html").is_file()
+        p = Path("cc-dcba.html")
+        assert p.is_file()
+        p.unlink()

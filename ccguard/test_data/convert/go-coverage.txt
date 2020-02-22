@@ -1,0 +1,18 @@
+mode: count
+github.com/nilleb/fsevents/config/default.go:55.38,59.3 1 0
+github.com/nilleb/fsevents/config/default.go:62.16,64.3 1 0
+github.com/nilleb/fsevents/config/default.go:67.34,69.3 1 0
+github.com/nilleb/fsevents/config/default.go:94.24,95.2 0 0
+github.com/nilleb/fsevents/logging/log.go:16.82,19.30 2 0
+github.com/nilleb/fsevents/logging/log.go:23.2,23.47 1 0
+github.com/nilleb/fsevents/logging/log.go:19.30,21.3 1 0
+github.com/nilleb/fsevents-watcher/fsevents-implementation.go:96.42,97.29 1 0
+github.com/nilleb/fsevents-watcher/fsevents-implementation.go:97.29,98.44 1 0
+github.com/nilleb/fsevents-watcher/fsevents-implementation.go:102.3,103.13 1 0
+github.com/nilleb/fsevents-watcher/fsevents-implementation.go:98.44,100.4 1 0
+github.com/nilleb/fsevents-watcher/fsevents-implementation.go:112.21,113.29 1 0
+github.com/nilleb/fsevents/logging/log.go:16.82,19.30 2 1
+github.com/nilleb/fsevents/logging/log.go:23.2,23.47 1 1
+github.com/nilleb/fsevents/logging/log.go:19.30,21.3 1 1
+github.com/nilleb/fsevents-watcher/fsevents-implementation.go:96.42,97.29 1 1
+github.com/nilleb/fsevents-watcher/fsevents-implementation.go:97.29,98.44 1 1

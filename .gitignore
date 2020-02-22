@@ -16,3 +16,4 @@ todo
 .mypy_cache
 cc-dcba.html
 diff-abcd-dcba.html
+ccguard/test_data/convert/go-coverage.xml
