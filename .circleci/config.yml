@@ -49,5 +49,9 @@ jobs:
             venv/bin/python ccguard/ccguard.py --html coverage.xml --adapter web --debug
             
       - store_artifacts:
-          path: test-reports
-          destination: test-reports
+          path: cc.html
+          destination: cc.html
+
+      - store_artifacts:
+          path: diff.html
+          destination: diff.html
