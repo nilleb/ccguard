@@ -14,10 +14,10 @@ def convert_golang_report(report, log_function=print):
     # name.go:line.column,line.column numberOfStatements count
 
     pattern = (
-        "(?P<filename>.+):(?P<line_begins>[0-9]+)"
-        "\.(?P<column_begins>[0-9]+),(?P<line_ends>[0-9]+)"  # noqa
-        "\.(?P<column_ends>[0-9]+) (?P<number_statements>[0-9]+) "  # noqa
-        "(?P<count>[0-9]+)"
+        r"(?P<filename>.+):(?P<line_begins>[0-9]+)"
+        r"\.(?P<column_begins>[0-9]+),(?P<line_ends>[0-9]+)"
+        r"\.(?P<column_ends>[0-9]+) (?P<number_statements>[0-9]+) "
+        r"(?P<count>[0-9]+)"
     )
     pattern = re.compile(pattern)
 
@@ -175,7 +175,7 @@ def main(args=None):
         xml = serialize(*convert_golang_report(args.report))
     if args.input_format == "xml":
         xml = ET.parse(args.report).get_root()
-    if not xml:
+    if xml is None:
         print("fatal: nothing to do")
         return
     if args.output_format == "xml":
