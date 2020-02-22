@@ -45,9 +45,15 @@ jobs:
             . venv/bin/activate
             venv/bin/black --check ccguard/*.py
             venv/bin/flake8 ccguard/*.py
-            venv/bin/pytest --cov-report xml --cov ccguard
+            venv/bin/pytest --cov-report xml --cov ccguard --junitxml=test-results/junit.xml
             venv/bin/python ccguard/ccguard.py --html coverage.xml --adapter web --debug
-            
+
+      - store_test_results:
+          path: test-results
+
+      - store_artifacts:
+          path: test-results 
+
       - store_artifacts:
           path: cc.html
           destination: cc.html
