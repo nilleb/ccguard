@@ -48,6 +48,14 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
             ccguard_convert coverage.txt -if go -of xml -o coverage.xml
             source /tmp/workspace/env/bin/activate
             ccguard --adapter web coverage.xml --target-branch ${GITHUB_PR_BASE_BRANCH:-origin/master}
+
+      - store_artifacts:
+          path: cc.html
+          destination: cc.html
+
+      - store_artifacts:
+          path: diff.html
+          destination: diff.html
 ```
 
 ## python workflow
@@ -63,4 +71,12 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
             venv/bin/flake8 ccguard/*.py
             venv/bin/pytest --cov-report xml --cov ccguard
             venv/bin/python ccguard/ccguard.py --html coverage.xml --adapter web --target-branch ${GITHUB_PR_BASE_BRANCH:-origin/master}
+
+      - store_artifacts:
+          path: cc.html
+          destination: cc.html
+
+      - store_artifacts:
+          path: diff.html
+          destination: diff.html
 ```
