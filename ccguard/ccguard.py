@@ -279,7 +279,8 @@ class SqliteAdapter(ReferenceAdapter):
 
     def dump(self) -> list:
         query = """SELECT commit_id, coverage_data
-        FROM timestamped_coverage_{repository_id}""".format(
+        FROM timestamped_coverage_{repository_id}
+        ORDER BY collected_at DESC""".format(
             repository_id=self.repository_id
         )
         return self.conn.execute(query).fetchall()

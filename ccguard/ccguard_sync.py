@@ -24,17 +24,23 @@ def prepare_inner_callable(commit_id):
     if commit_id:
 
         def inner_callable(source_adapter, dest_adapter, log_function=logging.debug):
-            log_function("Start retrieving data...")
+            log_function("⌛ Start retrieving data for %s...", commit_id)
             data = source_adapter.retrieve_cc_data(commit_id=commit_id)
-            log_function("- %s", commit_id)
+            log_function("✅ (%s) data retrieved!", commit_id)
             dest_adapter.persist(commit_id, data)
 
     else:
 
-        def inner_callable(source_adapter, dest_adapter, log_function=logging.debug):
+        def inner_callable(
+            source_adapter: ccguard.ReferenceAdapter,
+            dest_adapter: ccguard.ReferenceAdapter,
+            log_function=logging.debug,
+        ):
             log_function("Start retrieving data...")
-            for commit_id, data in source_adapter.dump():
-                log_function("- %s", commit_id)
+            for commit_id in source_adapter.get_cc_commits():
+                log_function("⌛ Start retrieving data for %s...", commit_id)
+                data = source_adapter.retrieve_cc_data(commit_id)
+                log_function("✅ (%s) data retrieved!", commit_id)
                 dest_adapter.persist(commit_id, data)
 
     return inner_callable
