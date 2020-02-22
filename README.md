@@ -19,7 +19,7 @@ Should work on both python2 and python3. python2 is not anymore supported.
 
 ## how should you use this software
 
-- [setup the server](https://github.com/nilleb/ccguard/blob/master/docs/setup-server-ubuntu.sh)
+- [setup the server](https://github.com/nilleb/ccguard/blob/master/docs/server-setup/server-setup-ubuntu.sh)
 - define your code coverage exclusions and inclusions (in your test runner, not in ccguard)
 - setup the CI workflow so that ccguard can ([here]((https://github.com/nilleb/ccguard/blob/master/docs/how%20to%20integrate%20ccguard%20in%20your%20CircleCI%20job.md)) for CircleCI)
   - ingest the code coverage report
@@ -50,7 +50,7 @@ please execute flake8, black, pytest and ccguard against all of your changes.
 ./pre-commit
 ```
 
-## execute this tool
+## ccguard - the code coverage guard
 
 ```sh
 cd your-favorite-source-folder
@@ -127,7 +127,7 @@ also serves coverage and diff reports.
 ccguard_server
 ```
 
-You could be interested to know how to [setup the server](https://github.com/nilleb/ccguard/blob/master/docs/setup-server-ubuntu.sh).
+You could be interested to know how to [setup the server](https://github.com/nilleb/ccguard/blob/master/docs/server-setup/server-setup-ubuntu.sh).
 
 ## credits
 
