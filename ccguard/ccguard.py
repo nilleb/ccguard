@@ -761,8 +761,12 @@ def main(args=None):
         logging.debug("Found the following reference commits: %r", reference_commits)
 
         common_ancestor = git.get_common_ancestor(args.target_branch)
+        current_commit_id = git.get_current_commit_id()
 
-        ref = common_ancestor if args.uncommitted else "{}^".format(common_ancestor)
+        if common_ancestor == current_commit_id and not args.uncommitted:
+            ref = "{}^".format(common_ancestor)
+        else:
+            ref = common_ancestor
 
         commit_id = determine_parent_commit(reference_commits, iter_callable(git, ref))
 
