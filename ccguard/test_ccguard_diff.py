@@ -32,7 +32,9 @@ def test_ccguard_diff():
         assert commit1 in lines[0]
         assert commit2 in lines[0]
         assert "-3.00%" in lines[-1]
-        assert Path("diff-abcd-dcba.html").is_file()
+        p = Path("diff-abcd-dcba.html")
+        assert p.is_file()
+        p.unlink()
 
 
 def test_ccguard_diff_not_enough_arguments():
