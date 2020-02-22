@@ -19,11 +19,16 @@ Should work on both python2 and python3. python2 is not anymore supported.
 
 ## how should you use this software
 
-- setup the server
-- define your code coverage exclusions and inclusions (otherwise than in ccguard)
-- setup the CI workflow so that ccguard can ingest the code coverage report and send it to the server and ensures that the coverage doesn't worsen
-- download reports on your computer using ccguard_sync
-- inspect the log, the coverage and the past reports with ccguard_log
+- [setup the server](https://github.com/nilleb/ccguard/blob/master/docs/setup-server-ubuntu.sh)
+- define your code coverage exclusions and inclusions (in your test runner, not in ccguard)
+- setup the CI workflow so that ccguard can ([here]((https://github.com/nilleb/ccguard/blob/master/docs/how%20to%20integrate%20ccguard%20in%20your%20CircleCI%20job.md)) for CircleCI)
+  - ingest the code coverage report
+  - send it to the server
+  - ensure that the coverage improves
+- (optional, but required for the following steps) download reports on your computer using [ccguard_sync](https://github.com/nilleb/ccguard#synchronize-repositories)
+- (recommended) inspect the git/reference log with [ccguard_log](https://github.com/nilleb/ccguard#display-code-coverage-trends)
+- (optional) display the code coverage for a specific commit with [ccguard_show](https://github.com/nilleb/ccguard#display-code-coverage-report)
+- (optional) display the code coverage diff between two references with [ccguard_diff](https://github.com/nilleb/ccguard#display-code-coverage-diff)
 
 ## welcome beta testers: setup
 
@@ -79,6 +84,22 @@ What a better feedback loop than measuring the work you have accomplished?
 ccguard_log
 ```
 
+## display code coverage report
+
+You could be curious about how the code coverage looked like a few commits ago..
+
+```sh
+ccguard_show 7b43f26
+```
+
+## display code coverage diff
+
+And, you could be curious about how the code coverage has evolved between two commits.
+
+```sh
+ccguard_diff 3413af3 7b43f26
+```
+
 ## synchronize repositories
 
 The use case being: you wish to use ccguard as pre-commit. Your team already has some references.
@@ -93,16 +114,20 @@ ccguard_sync redis sqlite
 ccguard_sync redis sqlite --repository_id abcd
 # limit to a single repository and a single commit
 ccguard_sync redis sqlite --repository_id abcd --commit_id ef12
+# retrieve data from a specific web server, and display whats going on behind the scenes
+ccguard_server_address=https://ccguard.nilleb.com ccguard_sync web sqlite --debug
 ```
 
 ## launch a local server
 
-ccguard server allows you to centralize the reports and the regression checks (useful for CI workflows)
+ccguard_server allows you to centralize the reports and the regression checks (useful for CI workflows)
 also serves coverage and diff reports.
 
 ```sh
 ccguard_server
 ```
+
+You could be interested to know how to [setup the server](https://github.com/nilleb/ccguard/blob/master/docs/setup-server-ubuntu.sh).
 
 ## credits
 
