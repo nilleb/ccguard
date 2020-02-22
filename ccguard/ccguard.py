@@ -64,6 +64,8 @@ def configuration(repository_path="."):
 
 
 def get_output(command, working_folder=None):
+    logging.debug("Executing %s in %s", command)
+
     try:
         output = subprocess.check_output(shlex.split(command), cwd=working_folder)
         return output.decode("utf-8")
