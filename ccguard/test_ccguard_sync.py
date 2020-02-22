@@ -16,8 +16,8 @@ def mock_adapter_class(commit_id_):
         def __exit__(self, exc_type, exc_value, traceback):
             pass
 
-        def dump(self):
-            return [[commit_id_, '<coverage line-rate="50"/>']]
+        def get_cc_commits(self):
+            return [commit_id_]
 
         def retrieve_cc_data(self, commit_id):
             assert commit_id == commit_id_
