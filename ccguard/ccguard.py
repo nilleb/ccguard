@@ -583,10 +583,13 @@ def has_better_coverage(diff: CoberturaDiff, tolerance=0, hard_minimum=-1) -> bo
             )
             ret = False
 
-    # existing files shoudl have a line rate at least equal to their past line rate..
+    # existing files should have a line rate at least equal to their past line rate..
     # ..minus the tolerance..
     # ..but always greater than the hard minimum, if any
     for fi in challenger_files.intersection(reference_files):
+        if not diff.total_misses(fi) and diff.diff_total_statements(fi) < 0:
+            logging.debug("Skipping %s, because of its number of missing statements.", fi)
+            continue
         if diff.cobertura2.line_rate(fi) < diff.cobertura1.line_rate(fi) - tolerance:
             message = (
                 "File {} has a line rate ({:.2f}) "
