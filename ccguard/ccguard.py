@@ -589,7 +589,7 @@ def has_better_coverage(diff: CoberturaDiff, tolerance=0, hard_minimum=-1) -> bo
     # ..minus the tolerance..
     # ..but always greater than the hard minimum, if any
     for fi in challenger_files.intersection(reference_files):
-        if not diff.total_misses(fi) and diff.diff_total_statements(fi) < 0:
+        if not diff.diff_total_misses(fi) and diff.diff_total_statements(fi) < 0:
             logging.debug(
                 "Skipping %s, because of its number of missing statements.", fi
             )
