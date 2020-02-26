@@ -247,20 +247,21 @@ class SqliteAdapter(ReferenceAdapter):
 
     def _update_count(self, commit_id):
         query = (
-            "INSERT OR IGNORE INTO retrieved_coverage_{repository_id} "
-            "(commit_id) VALUES (?) "
-        ).format(repository_id=self.repository_id,)
-        data_tuple = (commit_id,)
-        query2 = (
-            "UPDATE retrieved_coverage_{repository_id} "
+            "UPDATE timestamped_coverage_{repository_id} "
             "SET count = count + 1 WHERE commit_id = '{commit_id}';"
         ).format(repository_id=self.repository_id, commit_id=commit_id)
         try:
-            self.conn.execute(query, data_tuple)
-            self.conn.execute(query2)
+            self.conn.execute(query)
             self.conn.commit()
         except sqlite3.IntegrityError:
-            logging.debug("This commit seems to have already been recorded.")
+            logging.warning("Unable to update the commit count.")
+
+    def _get_line_rate(self, data: bytes) -> float:
+        try:
+            tree = ET.fromstring(data)
+            return float(tree.get("line-rate", 0.0))
+        except ET.XMLSyntaxError:
+            return 0.0
 
     def persist(self, commit_id: str, data: bytes):
         if not data or not isinstance(data, bytes):
@@ -268,9 +269,9 @@ class SqliteAdapter(ReferenceAdapter):
 
         query = (
             "INSERT INTO timestamped_coverage_{repository_id} "
-            "(commit_id, coverage_data) VALUES (?, ?) "
+            "(commit_id, coverage_data, line_rate) VALUES (?, ?, ?) "
         ).format(repository_id=self.repository_id)
-        data_tuple = (commit_id, data)
+        data_tuple = (commit_id, data, self._get_line_rate(data))
         try:
             self.conn.execute(query, data_tuple)
             self.conn.commit()
@@ -290,15 +291,9 @@ class SqliteAdapter(ReferenceAdapter):
             "CREATE TABLE IF NOT EXISTS `timestamped_coverage_{repository_id}` ("
             "`commit_id` varchar(40) NOT NULL, "
             "`collected_at` ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
-            "`coverage_data` BLOB NOT NULL default '', "
-            "PRIMARY KEY  (`commit_id`) );"
-        )
-        statement = ddl.format(repository_id=self.repository_id)
-        self.conn.execute(statement)
-        ddl = (
-            "CREATE TABLE IF NOT EXISTS `retrieved_coverage_{repository_id}` "
-            "( `commit_id` varchar(40) NOT NULL, "
             "`count` INT DEFAULT 1, "
+            "`line_rate` REAL DEFAULT 0.0, "
+            "`coverage_data` BLOB NOT NULL default '', "
             "PRIMARY KEY  (`commit_id`) );"
         )
         statement = ddl.format(repository_id=self.repository_id)
