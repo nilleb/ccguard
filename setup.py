@@ -24,6 +24,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/nilleb/ccguard",
     packages=["ccguard"],
+    package_data={
+        '': ['scripts/migrate_sqlite_database.py'],
+    },
     install_requires=["pycobertura", "gitpython", "redis", "flask", "requests", "lxml"],
     classifiers=[
         "Programming Language :: Python :: 3",

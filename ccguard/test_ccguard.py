@@ -51,7 +51,6 @@ def test_persist():
     reference = MagicMock()
     reference.persist = MagicMock()
 
-    data = "<coverage/>"
     path = "ccguard/test_data/fake_coverage.xml"
     with open(path, "rb") as fd:
         data = fd.read()
@@ -122,12 +121,15 @@ def adapter_scenario(adapter: ccguard.ReferenceAdapter):
     adapter.persist("two", b"<coverage>2</coverage>")
     adapter.persist("thr", b"<coverage>3</coverage>")
     try:
-        adapter.persist("four", "a string")
+        adapter.persist("four", "a string")  # we pretend only bytes
         assert False
     except ValueError:
         pass
+    adapter.persist(
+        "four", b"invalid xml"
+    )  # we don't care about the data, it's just data
     commits = adapter.get_cc_commits()
-    assert len(commits) == 3
+    assert len(commits) == 4
     data = adapter.retrieve_cc_data("one")
     assert isinstance(data, bytes)
     assert data.find(b"1")
@@ -136,7 +138,7 @@ def adapter_scenario(adapter: ccguard.ReferenceAdapter):
     data = adapter.retrieve_cc_data("thr")
     assert data.find(b"3")
     data = adapter.dump()
-    assert len(data) == 3
+    assert len(data) == 4
     assert not adapter.retrieve_cc_data("not found")
     for commit_id, reference in data:
         assert isinstance(commit_id, str)
