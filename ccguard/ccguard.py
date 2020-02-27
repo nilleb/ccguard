@@ -231,18 +231,32 @@ class SqliteAdapter(ReferenceAdapter):
             c for ct in self.conn.execute(commits_query).fetchall() for c in ct
         )
 
+    def _update_lts(self, commit_id, path):
+        query = (
+            "UPDATE timestamped_coverage_{repository_id} "
+            "SET lts = 1, coverage_data = '{path}' "
+            "WHERE commit_id = '{commit_id}';"
+        ).format(repository_id=self.repository_id, commit_id=commit_id, path=path)
+        self.conn.execute(query)
+        self.conn.commit()
+
     def retrieve_cc_data(self, commit_id: str) -> Optional[bytes]:
-        query = 'SELECT coverage_data FROM timestamped_coverage_{repository_id}\
+        query = 'SELECT coverage_data, lts FROM timestamped_coverage_{repository_id}\
                 WHERE commit_id="{commit_id}"'.format(
             repository_id=self.repository_id, commit_id=commit_id
         )
 
         self._update_count(commit_id)
 
-        result = self.conn.execute(query).fetchone()
+        result = self.conn.execute(query).fetchall()
 
         if result:
-            return next(iter(result))
+            data, lts = next(iter(result))
+            if lts == 0:
+                return data
+            else:
+                with open(data, "rb") as fd:
+                    return fd.read()
         return None
 
     def _update_count(self, commit_id):
@@ -293,6 +307,7 @@ class SqliteAdapter(ReferenceAdapter):
             "`collected_at` ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
             "`count` INT DEFAULT 1, "
             "`line_rate` REAL DEFAULT 0.0, "
+            "`lts` INT DEFAULT 0, "
             "`coverage_data` BLOB NOT NULL default '', "
             "PRIMARY KEY  (`commit_id`) );"
         )
