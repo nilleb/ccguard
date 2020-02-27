@@ -1,5 +1,4 @@
 import argparse
-import sys
 import sqlite3
 
 
@@ -13,22 +12,26 @@ def migrate_03_04(dbpath):
 
     tables = conn.execute(all_repositories).fetchall()
 
-    new_columns = [("count", "INT", "1"), ("line_rate", "REAL", "0.0")]
+    new_columns = [
+        ("count", "INT", "1"),
+        ("line_rate", "REAL", "0.0"),
+        ("lts", "INTEGER", "0"),
+    ]
     for table, sql in tables:
         print("Processing table {}".format(table))
         for name, ctype, default in new_columns:
             if name not in sql:
                 print("Adding {} {} DEFAULT {}".format(name, ctype, default))
-                ddl = "ALTER TABLE {} ADD COLUMN `{}` {} DEFAULT {}".format(table, name, ctype, default)
+                ddl = "ALTER TABLE {} ADD COLUMN `{}` {} DEFAULT {}".format(
+                    table, name, ctype, default
+                )
                 conn.execute(ddl)
     conn.commit()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description=(
-            "Maintenance scripts for the given SQLite database."
-        )
+        description=("Maintenance scripts for the given SQLite database.")
     )
 
     parser.add_argument(

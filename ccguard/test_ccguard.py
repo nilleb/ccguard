@@ -146,11 +146,24 @@ def adapter_scenario(adapter: ccguard.ReferenceAdapter):
 
 
 def test_sqladapter():
-    config = ccguard.configuration("ccguard/test_data/configuration_override")
-    with ccguard.SqliteAdapter("test", config) as adapter:
-        adapter_scenario(adapter)
-    # rather an integration test: we need to cleanup
-    os.unlink("./ccguard.db")
+    abspath = os.path.abspath("test.xml")
+
+    try:
+        config = ccguard.configuration("ccguard/test_data/configuration_override")
+        with ccguard.SqliteAdapter("test", config) as adapter:
+            adapter_scenario(adapter)
+
+            # lts scenario: the data has been exported to the
+            # long term storage
+            with open(abspath, "wb") as fd:
+                fd.write(b"<coverage>1</coverage>")
+            adapter._update_lts("one", abspath)
+            data = adapter.retrieve_cc_data("one")
+            assert data.find(b"1")
+    finally:
+        # rather an integration test: we need to cleanup
+        os.unlink("./ccguard.db")
+        os.unlink(abspath)
 
 
 def test_redis_adapter():
