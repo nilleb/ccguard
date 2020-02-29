@@ -131,7 +131,8 @@ def serialize(
 
 
 def write(dest, what):
-    with open(dest, "wb") as fd:
+    mode = "w" if isinstance(what, str) else "wb"
+    with open(dest, mode) as fd:
         fd.write(what)
 
     print("The output has been written to {}".format(dest))
@@ -174,7 +175,7 @@ def main(args=None):
     if args.input_format == "go":
         xml = serialize(*convert_golang_report(args.report))
     if args.input_format == "xml":
-        xml = ET.parse(args.report).get_root()
+        xml = ET.parse(args.report).getroot()
     if xml is None:
         print("fatal: nothing to do")
         return
@@ -183,8 +184,8 @@ def main(args=None):
             print(ET.tostring(xml, pretty_print=True))
         else:
             write(args.output, ET.tostring(xml, pretty_print=True))
-    elif args.output == "html":
-        source = ccguard.GitAdapter(os.path.dirpath(args.report)).get_root_path()
+    elif args.output_format == "html":
+        source = ccguard.GitAdapter(os.path.dirname(args.report) or ".").get_root_path()
         challenger = Cobertura(args.report, source=source)
         report = HtmlReporter(challenger)
         if not args.output:

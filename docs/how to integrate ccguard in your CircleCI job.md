@@ -27,7 +27,6 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
       - run:
           name: Prepare unit tests environment
           command: |
-            go get github.com/t-yuki/gocover-cobertura
             sudo apt-get update
             sudo apt install python3-pip python3-venv python3-wheel
             python3 -m venv /tmp/workspace/env --system-site-packages
@@ -45,8 +44,8 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
           name: Run unit tests
           command: |
             GO111MODULE=on go test -coverprofile coverage.txt -covermode=count -coverpkg=github.com/nilleb/fsevents/... ./...
-            ccguard_convert coverage.txt -if go -of xml -o coverage.xml
             source /tmp/workspace/env/bin/activate
+            ccguard_convert coverage.txt -if go -of xml -o coverage.xml
             ccguard --adapter web coverage.xml --target-branch ${GITHUB_PR_BASE_BRANCH:-origin/master}
 
       - store_artifacts:
