@@ -344,22 +344,21 @@ def test_sqlite_server_adapter():
             assert "test" in adapter.list_repositories()
             assert adapter.commits_count("test") == 1
             totals = adapter.totals()
-            assert not totals["servers"]
-            assert not totals["served_repositories"]
-            assert not totals["recorded_commits"]
+            assert not totals.keys()
             ccguard_server.send_telemetry_event(config)
             totals = adapter.totals()
-            assert totals["servers"] == 1
-            assert totals["served_repositories"] == 1
-            assert totals["recorded_commits"] == 1
+            version = list(totals.keys())[0]
+            assert totals[version]["servers"] == 1
+            assert totals[version]["served_repositories"] == 1
+            assert totals[version]["recorded_commits"] == 1
             with ccguard_server.ccguard.SqliteAdapter(
                 "test", config=config
             ) as repo_adapter:
                 repo_adapter.persist("fake_commit_id2", b"<coverage/>")
             ccguard_server.send_telemetry_event(config)
             totals = adapter.totals()
-            assert totals["servers"] == 1
-            assert totals["served_repositories"] == 1
-            assert totals["recorded_commits"] == 2
+            assert totals[version]["servers"] == 1
+            assert totals[version]["served_repositories"] == 1
+            assert totals[version]["recorded_commits"] == 2
     finally:
         os.unlink(test_db_path)
