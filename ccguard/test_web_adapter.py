@@ -19,11 +19,13 @@ def test_web_adapter_get_cc_commits():
     adapter = ccguard.WebAdapter("repository")
     requests_mock = MagicMock()
     requests_mock.get = MagicMock(
-        return_value=MagicMock(json=MagicMock(return_value=["abc", "def"]))
+        return_value=MagicMock(
+            json=MagicMock(return_value={"references": ["abc", "def"]})
+        )
     )
     ccguard.requests = requests_mock
     response = adapter.get_cc_commits()
     assert requests_mock.get.called_with(
-        "http://localhost:5000/api/v1/references/repository/all"
+        "http://localhost:5000/api/v2/references/repository/all"
     )
     assert len(response) == 2
