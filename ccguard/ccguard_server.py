@@ -205,7 +205,7 @@ def api_references_all_v1(repository_id):
     return jsonify(list(commits))
 
 
-@app.route("/api/v1/references/<string:repository_id>/all", methods=["GET"])
+@app.route("/api/v2/references/<string:repository_id>/all", methods=["GET"])
 def api_references_all_v2(repository_id):
     commits = api_references_all_common(repository_id)
     return jsonify({"references": list(commits)})
