@@ -206,15 +206,12 @@ class ReferenceAdapter(object):
     def dump(self) -> list:
         raise NotImplementedError()
 
-    @staticmethod
-    def list_repositories(config: dict) -> frozenset:
-        raise NotImplementedError()
-
 
 class SqliteAdapter(ReferenceAdapter):
     def __init__(self, repository_id, config):
         super().__init__(repository_id, config)
         dbpath = str(config.get("sqlite.dbpath"))
+        logging.debug(dbpath)
         self.conn = sqlite3.connect(dbpath)
         self._create_table()
 
@@ -314,16 +311,6 @@ class SqliteAdapter(ReferenceAdapter):
         statement = ddl.format(repository_id=self.repository_id)
         self.conn.execute(statement)
 
-    @staticmethod
-    def list_repositories(config) -> frozenset:
-        dbpath = str(config.get("sqlite.dbpath"))
-        conn = sqlite3.connect(dbpath)
-        query = """SELECT name FROM sqlite_master
-            WHERE type = "table" AND name LIKE "timestamped_coverage_%" """
-
-        tuples = conn.execute(query).fetchall()
-        return frozenset({row[0].lstrip("timestamped_coverage_") for row in tuples})
-
 
 class WebAdapter(ReferenceAdapter):
     def __init__(self, repository_id, config={}):
@@ -395,7 +382,6 @@ class RedisAdapter(ReferenceAdapter):
     def __init__(self, repository_id: str, config={}):
         self.repository_id = repository_id
         self.redis = self._build_redis(config)
-        self.redis.sadd("ccguardrepositories", repository_id)
 
     @staticmethod
     def _build_redis(config: dict):
@@ -428,11 +414,6 @@ class RedisAdapter(ReferenceAdapter):
 
     def dump(self) -> list:
         return self.redis.hgetall(self.repository_id)
-
-    @staticmethod
-    def list_repositories(config: dict) -> frozenset:
-        redis = RedisAdapter._build_redis(config)
-        return redis.smembers("ccguardrepositories")
 
 
 def determine_parent_commit(
