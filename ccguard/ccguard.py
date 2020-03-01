@@ -340,10 +340,10 @@ class WebAdapter(ReferenceAdapter):
 
     def get_cc_commits(self) -> frozenset:
         r = requests.get(
-            "{p.server}/api/v1/references/{p.repository_id}/all".format(p=self)
+            "{p.server}/api/v2/references/{p.repository_id}/all".format(p=self)
         )
         try:
-            return frozenset(r.json())
+            return frozenset(r.json().get("references", []))
         except json.decoder.JSONDecodeError:
             logging.warning(
                 "Got unexpected server response. Is the server configuration correct?\n%s",
