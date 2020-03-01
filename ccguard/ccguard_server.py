@@ -1,11 +1,13 @@
+import argparse
 import io
 import logging
-import argparse
+
 import flask
 import lxml
-from flask import request, jsonify, abort
+from flask import abort, jsonify, request
 from pycobertura import Cobertura
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
+
 import ccguard
 
 app = flask.Flask(__name__)
@@ -52,25 +54,43 @@ def home():
     )
 
 
-@app.route("/api/v1/repositories/debug", methods=["GET"])
-@authenticated
-def api_repositories_debug():
+def api_repositories_debug_common():
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
-    repositories = adapter_class.list_repositories(config)
+    return adapter_class.list_repositories(config)
 
-    return jsonify(list(repositories))
+
+@app.route("/api/v1/repositories/debug", methods=["GET"])
+@authenticated
+def api_repositories_debug_v1():
+    response = api_repositories_debug_common()
+    return jsonify(list(response))
+
+
+@app.route("/api/v2/repositories/debug", methods=["GET"])
+@authenticated
+def api_repositories_debug_v2():
+    response = api_repositories_debug_common()
+    return jsonify({"repositories": list(response)})
+
+
+def api_references_all_common(repository_id):
+    config = ccguard.configuration()
+    adapter_class = ccguard.adapter_factory(None, config)
+    with adapter_class(repository_id, config) as adapter:
+        return adapter.get_cc_commits()
 
 
 @app.route("/api/v1/references/<string:repository_id>/all", methods=["GET"])
-def api_references_all(repository_id):
-    config = ccguard.configuration()
-    adapter_class = ccguard.adapter_factory(None, config)
-    commits = []
-    with adapter_class(repository_id, config) as adapter:
-        commits = adapter.get_cc_commits()
-
+def api_references_all_v1(repository_id):
+    commits = api_references_all_common(repository_id)
     return jsonify(list(commits))
+
+
+@app.route("/api/v2/references/<string:repository_id>/all", methods=["GET"])
+def api_references_all_v2(repository_id):
+    commits = api_references_all_common(repository_id)
+    return jsonify({"references": list(commits)})
 
 
 def dump_data(repository_id):
