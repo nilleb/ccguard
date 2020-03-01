@@ -1,5 +1,7 @@
+import os
+from unittest.mock import MagicMock, call, patch
+
 from . import ccguard_server
-from unittest.mock import MagicMock, patch
 
 
 def test_home():
@@ -239,12 +241,125 @@ def test_parse_args():
 
 
 def test_load_app():
-    ccguard_server.load_app("token")
+    adapter = MagicMock()
+    SqliteServerAdapterClass = MagicMock()
+    SqliteServerAdapterClass.__enter__ = MagicMock(return_value=adapter)
+    adapter.list_repositories = MagicMock(return_value=frozenset([]))
+    app = MagicMock()
+    app.run = MagicMock()
+    requests_mock = MagicMock()
+    ccguard_server.requests = requests_mock
+    with patch.object(
+        ccguard_server, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
+    ):
+        ccguard_server.load_app("token")
     assert ccguard_server.app.config["TOKEN"] == "token"
+    adapter.list_repositories.assert_called_once()
+    requests_mock.post.assert_called_once()
 
 
 def test_main():
+    adapter = MagicMock()
+    SqliteServerAdapterClass = MagicMock()
+    SqliteServerAdapterClass.__enter__ = MagicMock(return_value=adapter)
+    adapter.list_repositories = MagicMock(return_value=frozenset([]))
+    requests_mock = MagicMock()
+    ccguard_server.requests = requests_mock
     app = MagicMock()
     app.run = MagicMock()
-    ccguard_server.main([], app=app)
+    with patch.object(
+        ccguard_server, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
+    ):
+        ccguard_server.main([], app=app)
+    adapter.list_repositories.assert_called_once()
     app.run.assert_called_once()
+    requests_mock.post.assert_called_once()
+
+
+def test_send_event():
+    adapter = MagicMock()
+    SqliteServerAdapterClass = MagicMock()
+    SqliteServerAdapterClass.__enter__ = MagicMock(return_value=adapter)
+    adapter.list_repositories = MagicMock(
+        return_value=frozenset(["one", "two", "three"])
+    )
+    adapter.commits_count = MagicMock(side_effect=lambda x: len(x))
+    app = MagicMock()
+    app.run = MagicMock()
+    requests_mock = MagicMock()
+    ccguard_server.requests = requests_mock
+    with patch.object(
+        ccguard_server, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
+    ):
+        ccguard_server.load_app("token")
+    assert ccguard_server.app.config["TOKEN"] == "token"
+    adapter.list_repositories.assert_called_once()
+    adapter.commits_count.assert_has_calls(
+        [call("three"), call("two"), call("one")], any_order=True
+    )
+    requests_mock.post.assert_called_once()
+
+
+def test_send_event_telemetry_disabled():
+    adapter = MagicMock()
+    SqliteServerAdapterClass = MagicMock()
+    SqliteServerAdapterClass.__enter__ = MagicMock(return_value=adapter)
+    adapter.list_repositories = MagicMock(
+        return_value=frozenset(["one", "two", "three"])
+    )
+    adapter.commits_count = MagicMock(side_effect=lambda x: len(x))
+    app = MagicMock()
+    app.run = MagicMock()
+    requests_mock = MagicMock()
+    ccguard_server.requests = requests_mock
+
+    with patch.object(
+        ccguard_server, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
+    ):
+        with patch.object(
+            ccguard_server.ccguard,
+            "configuration",
+            return_value={"telemetry.disable": True},
+        ):
+            ccguard_server.load_app("token")
+
+    adapter.record.assert_called_once()
+    adapter.list_repositories.assert_called_once()
+    adapter.commits_count.assert_has_calls(
+        [call("three"), call("two"), call("one")], any_order=True
+    )
+    requests_mock.post.assert_not_called()
+
+
+def test_sqlite_server_adapter():
+    try:
+        test_db_path = "./ccguard.server.db"
+        config = {"sqlite.dbpath": test_db_path, "telemetry.disable": True}
+        with ccguard_server.SqliteServerAdapter(config) as adapter:
+            assert not adapter.list_repositories()
+            with ccguard_server.ccguard.SqliteAdapter(
+                "test", config=config
+            ) as repo_adapter:
+                repo_adapter.persist("fake_commit_id", b"<coverage/>")
+            assert "test" in adapter.list_repositories()
+            assert adapter.commits_count("test") == 1
+            totals = adapter.totals()
+            assert not totals["servers"]
+            assert not totals["served_repositories"]
+            assert not totals["recorded_commits"]
+            ccguard_server.send_telemetry_event(config)
+            totals = adapter.totals()
+            assert totals["servers"] == 1
+            assert totals["served_repositories"] == 1
+            assert totals["recorded_commits"] == 1
+            with ccguard_server.ccguard.SqliteAdapter(
+                "test", config=config
+            ) as repo_adapter:
+                repo_adapter.persist("fake_commit_id2", b"<coverage/>")
+            ccguard_server.send_telemetry_event(config)
+            totals = adapter.totals()
+            assert totals["servers"] == 1
+            assert totals["served_repositories"] == 1
+            assert totals["recorded_commits"] == 2
+    finally:
+        os.unlink(test_db_path)
