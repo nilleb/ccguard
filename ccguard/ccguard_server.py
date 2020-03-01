@@ -64,7 +64,7 @@ class SqliteServerAdapter(object):
     def __init__(self, config):
         config = config or ccguard.configuration()
         dbpath = str(config.get("sqlite.dbpath"))
-        logging.debug(dbpath)
+        logging.debug("SqliteServerAdapter: dbpath %s", dbpath)
         self.conn = sqlite3.connect(dbpath)
         self._create_table()
 
@@ -120,16 +120,20 @@ class SqliteServerAdapter(object):
 
     def totals(self) -> dict:
         query = (
-            "SELECT count(*), sum(repositories_count), sum(commits_count) "
-            "FROM ccguard_server_stats"
+            "SELECT count(*), sum(repositories_count), sum(commits_count), version "
+            "FROM ccguard_server_stats "
+            "GROUP BY version"
         )
         rows = self.conn.execute(query).fetchall()
 
-        data = {
-            "servers": rows[0][0],
-            "served_repositories": rows[0][1] or 0,
-            "recorded_commits": rows[0][2] or 0,
-        }
+        data = {}
+        for row in rows:
+            version = {
+                "servers": row[0],
+                "served_repositories": row[1] or 0,
+                "recorded_commits": row[2] or 0,
+            }
+            data[row[3]] = version
 
         return data
 
