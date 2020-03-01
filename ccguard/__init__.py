@@ -11,3 +11,5 @@ from .ccguard import (  # noqa
     VersionedCobertura,
     normalize_report_paths,
 )
+
+__version__ = "0.4.2"
