@@ -82,6 +82,7 @@ class SqliteServerAdapter(object):
             "`repositories_count` INT DEFAULT 0, "
             "`commits_count` INT DEFAULT 0, "
             "`last_updated` ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+            "`version` varchar(40) NOT NULL, "
             "PRIMARY KEY  (`ip`) );"
         )
         self.conn.execute(statement)
@@ -92,12 +93,13 @@ class SqliteServerAdapter(object):
 
         statement = (
             "INSERT INTO ccguard_server_stats "
-            "(ip, repositories_count, commits_count) VALUES (?, ?, ?)"
+            "(ip, repositories_count, commits_count, version) VALUES (?, ?, ?, ?)"
         )
         data_tuple = (
             data["ip"],
             data.get("repositories_count", 0),
             data.get("commits_count", 0),
+            data.get("version", "unknown"),
         )
         try:
             self.conn.execute(statement, data_tuple)
@@ -108,7 +110,8 @@ class SqliteServerAdapter(object):
                 "UPDATE ccguard_server_stats "
                 f'SET repositories_count = {data["repositories_count"]}, '
                 f'commits_count = {data["commits_count"]}, '
-                f'last_updated = "{datetime.datetime.now()}" '
+                f'last_updated = "{datetime.datetime.now()}", '
+                f'version = "{data["version"]}" '
                 f'WHERE ip = "{data["ip"]}"'
             )
             logging.debug(statement)
@@ -355,7 +358,11 @@ def _prepare_event(config=None):
     with SqliteServerAdapter(config) as adapter:
         repositories = adapter.list_repositories()
 
-        data = {"repositories_count": len(repositories), "commits_count": 0}
+        data = {
+            "repositories_count": len(repositories),
+            "commits_count": 0,
+            "version": ccguard.__version__,
+        }
 
         for repository_id in repositories:
             commits = adapter.commits_count(repository_id)
