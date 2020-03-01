@@ -647,9 +647,8 @@ def normalize_report_paths(report, repository_root):
 
     if xml.xpath('/coverage/sources/source[@class="ccguard-meta-sources-root"]'):
         logging.debug("The report has already been processed.")
-        return None
-
-    _normalize_report_paths(xml, repository_root)
+    else:
+        _normalize_report_paths(xml, repository_root)
 
     return tree
 
