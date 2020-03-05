@@ -267,12 +267,16 @@ class SqliteAdapter(ReferenceAdapter):
         except sqlite3.IntegrityError:
             logging.warning("Unable to update the commit count.")
 
-    def _get_line_rate(self, data: bytes) -> float:
+    def _get_line_coverage(self, data: bytes) -> (float, int, int):
         try:
             tree = ET.fromstring(data)
-            return float(tree.get("line-rate", 0.0))
+            return (
+                float(tree.get("line-rate", 0.0)),
+                int(tree.get("lines-covered", 0)),
+                int(tree.get("lines-valid", 0)),
+            )
         except ET.XMLSyntaxError:
-            return 0.0
+            return 0.0, 0, 0
 
     def persist(self, commit_id: str, data: bytes):
         if not data or not isinstance(data, bytes):
@@ -280,9 +284,10 @@ class SqliteAdapter(ReferenceAdapter):
 
         query = (
             "INSERT INTO timestamped_coverage_{repository_id} "
-            "(commit_id, coverage_data, line_rate) VALUES (?, ?, ?) "
+            "(commit_id, coverage_data, line_rate, lines_covered, lines_valid) "
+            "VALUES (?, ?, ?, ?, ?) "
         ).format(repository_id=self.repository_id)
-        data_tuple = (commit_id, data, self._get_line_rate(data))
+        data_tuple = (commit_id, data, *self._get_line_coverage(data))
         try:
             self.conn.execute(query, data_tuple)
             self.conn.commit()
@@ -304,6 +309,8 @@ class SqliteAdapter(ReferenceAdapter):
             "`collected_at` ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
             "`count` INT DEFAULT 1, "
             "`line_rate` REAL DEFAULT 0.0, "
+            "`lines_covered` INT DEFAULT 0, "
+            "`lines_valid` INT DEFAULT 0, "
             "`lts` INT DEFAULT 0, "
             "`coverage_data` BLOB NOT NULL default '', "
             "PRIMARY KEY  (`commit_id`) );"
