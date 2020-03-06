@@ -14,13 +14,13 @@ from pathlib import Path
 from datetime import datetime
 import os
 import requests
-from typing import Optional, Callable
+from typing import Optional, Callable, Iterable
 from contextlib import contextmanager
 from pycobertura import Cobertura, CoberturaDiff, TextReporterDelta, TextReporter
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 from pycobertura.filesystem import FileSystem
 
-
+__version__ = "dev~"
 HOME = Path.home()
 DB_FILE_NAME = ".ccguard.db"
 CONFIG_FILE_NAME = ".ccguard.config.json"
@@ -142,7 +142,7 @@ class GitAdapter(object):
             "git rev-parse HEAD", working_folder=self.repository_folder
         ).rstrip()
 
-    def iter_git_commits(self, refs=None):
+    def iter_git_commits(self, refs: [str] = None) -> Iterable[str]:
         if not refs:
             refs = ["HEAD^"]
 

@@ -11,7 +11,7 @@ import flask
 import lxml
 import requests
 from flask import abort, jsonify, request
-from pycobertura import Cobertura
+from pycobertura import Cobertura, CoberturaDiff
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 
 import ccguard
@@ -105,7 +105,7 @@ class SqliteServerAdapter(object):
             self.conn.execute(statement, data_tuple)
             self.conn.commit()
         except sqlite3.IntegrityError:
-            logging.warning("This IP seems to have already been recorded.")
+            logging.info("This IP seems to have already been recorded.")
             statement = (
                 "UPDATE ccguard_server_stats "
                 f'SET repositories_count = {data["repositories_count"]}, '
@@ -221,6 +221,29 @@ def api_references_all_v2(repository_id):
     return jsonify({"references": list(commits)})
 
 
+def iter_callable(refs):
+    def call():
+        local = refs if isinstance(refs, str) else refs.decode("utf-8")
+        yield [ref for ref in local.split("\n")]
+
+    return call
+
+
+@app.route("/api/v1/references/<string:repository_id>/choose", methods=["POST"])
+def api_references_choose_v1(repository_id):
+    commits = request.data
+    print(commits)
+    config = ccguard.configuration()
+    adapter_class = ccguard.adapter_factory(None, config)
+    with adapter_class(repository_id, config) as adapter:
+        references = adapter.get_cc_commits()
+        parent = ccguard.determine_parent_commit(references, iter_callable(commits))
+        if not parent:
+            abort(404)
+        else:
+            return parent
+
+
 def dump_data(repository_id):
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
@@ -291,6 +314,27 @@ def api_upload_reference(repository_id, commit_id):
         except Exception:
             abort(400, "Invalid request.")
         return "{} bytes ({}) received".format(len(data), type(data).__name__)
+
+
+@app.route(
+    "/api/v1/references/<string:repository_id>/<string:commit_id1>..<string:commit_id2>/comparison",
+    methods=["GET"],
+)
+def api_compare(repository_id, commit_id1, commit_id2):
+    tolerance = int(request.args.get("tolerance") or 0)
+    hard_minimum = int(request.args.get("hard_minimum") or 0)
+    config = ccguard.configuration()
+    adapter_class = ccguard.adapter_factory(None, config)
+    with adapter_class(repository_id, config) as adapter:
+        reference = retrieve(adapter, commit_id1)
+        challenger = retrieve(adapter, commit_id2)
+        if not reference or not challenger:
+            abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
+        diff = CoberturaDiff(reference, challenger)
+        has_coverage_improved = ccguard.has_better_coverage(
+            diff, tolerance=tolerance, hard_minimum=hard_minimum
+        )
+        return str(255 if not has_coverage_improved else 0)
 
 
 @app.route("/web/report/<string:repository_id>/<string:commit_id>", methods=["GET"])
