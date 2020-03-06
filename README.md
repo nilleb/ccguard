@@ -12,10 +12,8 @@ ccguard compares the current code coverage to past code coverage. ccguard fails 
 
 ## requires
 
-- python
+- python3
 - git
-
-Should work on both python2 and python3. python2 is not anymore supported.
 
 ## how should you use this software
 
