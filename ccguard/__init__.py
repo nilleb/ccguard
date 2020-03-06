@@ -10,6 +10,8 @@ from .ccguard import (  # noqa
     print_delta_report,
     VersionedCobertura,
     normalize_report_paths,
+    determine_parent_commit,
+    has_better_coverage,
 )
 
 __version__ = "0.5.0"

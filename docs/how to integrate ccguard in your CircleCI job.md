@@ -20,6 +20,8 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
 
 ## Go workflow
 
+Disclaimer: requires python. You could instead use the "_I don't want install python3_ workflow".
+
 ```yaml
   prepare_tests:
     description: "Prepare unit tests environment"
@@ -57,7 +59,7 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
           destination: diff.html
 ```
 
-## python workflow
+## python 3 workflow
 
 ```yaml
       - run:
@@ -66,10 +68,10 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
             python3 -m venv venv
             . venv/bin/activate
             pip install black flake8 pytest pytest-cov ccguard
-            venv/bin/black --check ccguard/*.py
-            venv/bin/flake8 ccguard/*.py
-            venv/bin/pytest --cov-report xml --cov ccguard
-            venv/bin/python ccguard/ccguard.py --html coverage.xml --adapter web --target-branch ${GITHUB_PR_BASE_BRANCH:-origin/master}
+            black --check ccguard/*.py
+            flake8 ccguard/*.py
+            pytest --cov-report xml --cov src
+            ccguard --html coverage.xml --adapter web --target-branch ${GITHUB_PR_BASE_BRANCH:-origin/master}
 
       - store_artifacts:
           path: cc.html
@@ -78,4 +80,15 @@ CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
       - store_artifacts:
           path: diff.html
           destination: diff.html
+```
+
+## _I don't want install python3_ workflow
+
+```yaml
+      - run:
+          name: run build workflow
+          command: |
+            # compute code coverage.xml somehow here
+            curl https://raw.githubusercontent.com/nilleb/ccguard/master/ccguard/ccguard.sh -o ccguard.sh
+            bash ccguard.sh coverage.xml
 ```
