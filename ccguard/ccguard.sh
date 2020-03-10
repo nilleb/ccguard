@@ -33,7 +33,7 @@ commit_id=`git rev-parse HEAD`
 common_ancestor=`git merge-base ${base_branch} HEAD`
 git rev-list ${common_ancestor} --max-count=100 > refs.txt
 
-curl -d @${coverage_xml} -H "Content-Type: application/xml" -X PUT ${ccguard_server_address}/api/v1/references/${repository_id}/${commit_id}/data -H "authorization: ${ccguard_token}"
+curl -T ${coverage_xml} -H "Content-Type: application/xml" -X PUT ${ccguard_server_address}/api/v1/references/${repository_id}/${commit_id}/data -H "authorization: ${ccguard_token}"
 http_status=`curl --data-binary @refs.txt -H "Content-Type: text/plain" -X POST ${ccguard_server_address}/api/v1/references/${repository_id}/choose -o ref.txt -s -w "%{http_code}\n"`
 if [[ $http_status == "200" ]]; then
     ref=`cat ref.txt`
