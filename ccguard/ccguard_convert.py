@@ -51,8 +51,9 @@ def convert_golang_report(report, log_function=print):
         file_coverage[filename] = file_rate
         covered += file_covered_lines
         total += len(lines)
-        prev_cov, prev_total, prev_rate = packages_coverage[os.path.dirname(filename)]
-        packages_coverage[os.path.dirname(filename)] = (
+        package_name = os.path.dirname(filename)
+        prev_cov, prev_total, prev_rate = packages_coverage[package_name]
+        packages_coverage[package_name] = (
             prev_cov + file_covered_lines,
             prev_total + file_total_lines,
             prev_rate + file_rate,
@@ -108,11 +109,13 @@ def serialize(
             class_elem.set("line-rate", str(file_coverage[filename]))
             class_elem.set("branch-rate", str(0))
             class_elem.set("complexity", str(0))
+            lines_elem = objectify.Element("lines")
             for lineno, hits in files[filename].items():
                 line_elem = objectify.Element("line")
                 line_elem.set("number", str(lineno))
                 line_elem.set("hits", str(hits))
-                class_elem.append(line_elem)
+                lines_elem.append(line_elem)
+            class_elem.append(lines_elem)
             classes_elem.append(class_elem)
 
         package_elem.append(classes_elem)
