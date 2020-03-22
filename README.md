@@ -12,7 +12,7 @@ ccguard compares the current code coverage to past code coverage. ccguard fails 
 
 ## requires
 
-- python3
+- python3 (on the server)
 - git
 
 ## how should you use this software

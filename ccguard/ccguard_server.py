@@ -232,7 +232,7 @@ def iter_callable(refs):
 @app.route("/api/v1/references/<string:repository_id>/choose", methods=["POST"])
 def api_references_choose_v1(repository_id):
     commits = request.data
-    print(commits)
+    logging.debug("Received potential reference commits: %s", commits)
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
@@ -312,6 +312,7 @@ def api_upload_reference(repository_id, commit_id):
         try:
             adapter.persist(commit_id, data)
         except Exception:
+            logging.exception("Unexpected exception on persist.")
             abort(400, "Invalid request.")
         return "{} bytes ({}) received".format(len(data), type(data).__name__)
 
