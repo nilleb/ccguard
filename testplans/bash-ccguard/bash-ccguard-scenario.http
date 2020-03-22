@@ -1,0 +1,77 @@
+GET http://127.0.0.1:8888/api/v1/repositories/debug
+authorization: aaaa
+
+---
+
+GET http://127.0.0.1:8888/api/v1/references/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/all
+
+---
+
+POST http://127.0.0.1:8888/api/v1/references/invalid/choose
+
+commit_id
+
+# assert returns a 404
+
+---
+
+POST http://127.0.0.1:8888/api/v1/references/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/choose
+
+commit_id
+
+# assert returns a 404
+
+--- 
+
+POST http://127.0.0.1:8888/api/v1/references/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/choose
+
+commit_id
+8ce0211766a343c301181d3dc41ef2939dc78ecb
+356f5c94fbe3270a9d91c739d3668f21b4fd8b69
+valid_commit_id2
+
+# assert returns 356f5c94fbe3270a9d91c739d3668f21b4fd8b69
+
+---
+
+# comparing invalid repository commits
+
+GET http://127.0.0.1:8888/api/v1/references/invalid/invalid..invalid/comparison
+
+# assert returns 404
+
+---
+
+# comparing invalid commit ids
+
+GET http://127.0.0.1:8888/api/v1/references/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/invalid..invalid/comparison
+
+# assert returns 404
+
+---
+
+# comparing commit with previous one with a better coverage
+
+GET http://127.0.0.1:8888/api/v1/references/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/356f5c94fbe3270a9d91c739d3668f21b4fd8b69..215bb368643b5846d076e46d362d197e1977fe03/comparison
+
+# assert returns a valid comparison status (255)
+
+---
+
+# comparing commit with self
+
+GET http://127.0.0.1:8888/api/v1/references/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/356f5c94fbe3270a9d91c739d3668f21b4fd8b69..356f5c94fbe3270a9d91c739d3668f21b4fd8b69/comparison
+
+# assert returns a 200
+
+---
+
+GET http://127.0.0.1:8888/api/v1/references/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/356f5c94fbe3270a9d91c739d3668f21b4fd8b69..215bb368643b5846d076e46d362d197e1977fe03/comparison?tolerance=100
+
+# assert returns a successful comparison status (0)
+
+---
+
+GET http://127.0.0.1:8888/api/v1/references/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/356f5c94fbe3270a9d91c739d3668f21b4fd8b69..215bb368643b5846d076e46d362d197e1977fe03/comparison?tolerance=100&hard_minimum=99
+
+# assert returns a failure comparison status (255)
