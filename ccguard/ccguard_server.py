@@ -317,7 +317,8 @@ def api_upload_reference(repository_id, commit_id):
 
 
 @app.route(
-    "/api/v1/references/<string:repository_id>/<string:commit_id1>..<string:commit_id2>/comparison",
+    "/api/v1/references/<string:repository_id>/"
+    "<string:commit_id1>..<string:commit_id2>/comparison",
     methods=["GET"],
 )
 def api_compare(repository_id, commit_id1, commit_id2):
@@ -442,14 +443,14 @@ def send_telemetry_event(config: dict = None):
     return data
 
 
-def load_app(token):
-    send_telemetry_event()
+def load_app(token, config=None):
+    send_telemetry_event(config)
     app.config["TOKEN"] = token
     return app
 
 
-def main(args=None, app=app):
-    send_telemetry_event()
+def main(args=None, app=app, config=None):
+    send_telemetry_event(config)
     logging.basicConfig(level=logging.DEBUG)
     args = parse_args(args)
     app.config["TOKEN"] = args.token
