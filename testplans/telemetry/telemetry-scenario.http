@@ -1,0 +1,41 @@
+GET http://127.0.0.1:8888/api/v1/repositories/debug
+authorization: aaaa
+
+---
+
+GET http://127.0.0.1:8888/api/v2/repositories/debug
+authorization: aaaa
+
+---
+
+GET http://127.0.0.1:8888/api/v1/telemetry
+
+---
+
+POST http://127.0.0.1:8888/api/v1/telemetry
+
+# invalid json payload, no content type
+# expected: a (200, "OK, Thanks all the same!") response
+{
+    "repositories_count": 1,
+    "commits_count": 1,
+    "version": 0.4.12,
+    "commits_count": 1
+}
+
+---
+
+POST http://127.0.0.1:8888/api/v1/telemetry
+authorization: aaaa
+content-type: application/json
+
+{
+    "repositories_count": 1,
+    "commits_count": 1,
+    "version": "0.4.13",
+    "commits_count": 1
+}
+
+---
+
+GET http://127.0.0.1:8888/api/v1/telemetry
