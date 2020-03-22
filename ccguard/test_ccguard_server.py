@@ -252,7 +252,7 @@ def test_load_app():
     with patch.object(
         ccguard_server, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
     ):
-        ccguard_server.load_app("token")
+        ccguard_server.load_app("token", config={"telemetry.disable": False})
     assert ccguard_server.app.config["TOKEN"] == "token"
     adapter.list_repositories.assert_called_once()
     requests_mock.post.assert_called_once()
@@ -270,7 +270,7 @@ def test_main():
     with patch.object(
         ccguard_server, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
     ):
-        ccguard_server.main([], app=app)
+        ccguard_server.main([], app=app, config={"telemetry.disable": False})
     adapter.list_repositories.assert_called_once()
     app.run.assert_called_once()
     requests_mock.post.assert_called_once()
@@ -291,7 +291,7 @@ def test_send_event():
     with patch.object(
         ccguard_server, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
     ):
-        ccguard_server.load_app("token")
+        ccguard_server.load_app("token", config={"telemetry.disable": False})
     assert ccguard_server.app.config["TOKEN"] == "token"
     adapter.list_repositories.assert_called_once()
     adapter.commits_count.assert_has_calls(
@@ -321,7 +321,7 @@ def test_send_event_telemetry_disabled():
             "configuration",
             return_value={"telemetry.disable": True},
         ):
-            ccguard_server.load_app("token")
+            ccguard_server.load_app("token", config={"telemetry.disable": True})
 
     adapter.record.assert_called_once()
     adapter.list_repositories.assert_called_once()
