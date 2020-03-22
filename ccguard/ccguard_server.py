@@ -105,7 +105,7 @@ class SqliteServerAdapter(object):
             self.conn.execute(statement, data_tuple)
             self.conn.commit()
         except sqlite3.IntegrityError:
-            logging.exception("This IP seems to have already been recorded.")
+            logging.warning("This IP seems to have already been recorded.")
             statement = (
                 "UPDATE ccguard_server_stats "
                 f'SET repositories_count = {data["repositories_count"]}, '
@@ -164,25 +164,28 @@ def record_telemetry_event(data: dict, remote_addr: str, config: dict = None):
 
 
 @app.route("/api/v1/telemetry", methods=["POST"])
-@authenticated
 def api_telemetry_collect():
     data = request.get_json()
+
+    if not data:
+        return "OK, Thanks all the same!"
+
     record_telemetry_event(data, remote_addr=request.remote_addr)
     return "OK, Thanks!"
 
 
 @app.route("/api/v1/telemetry", methods=["GET"])
-@authenticated
 def api_telemetry_get():
-    with SqliteServerAdapter() as server_adapter:
+    config = ccguard.configuration()
+    with SqliteServerAdapter(config) as server_adapter:
         data = server_adapter.totals()
     return jsonify(data)
 
 
 def api_repositories_debug_common():
     config = ccguard.configuration()
-    adapter_class = ccguard.adapter_factory(None, config)
-    return adapter_class.list_repositories(config)
+    adapter = SqliteServerAdapter(config)
+    return adapter.list_repositories()
 
 
 @app.route("/api/v1/repositories/debug", methods=["GET"])
