@@ -184,8 +184,8 @@ def api_telemetry_get():
 
 def api_repositories_debug_common():
     config = ccguard.configuration()
-    adapter = SqliteServerAdapter(config)
-    return adapter.list_repositories()
+    with SqliteServerAdapter(config) as adapter:
+        return adapter.list_repositories()
 
 
 @app.route("/api/v1/repositories/debug", methods=["GET"])
