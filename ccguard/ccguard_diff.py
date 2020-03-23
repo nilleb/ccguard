@@ -70,8 +70,10 @@ def main(args=None, log_function=print):
 
         if first == "HEAD":
             first = head
+            log_function("Considering {} as first.".format(head))
         if second == "HEAD":
             second = head
+            log_function("Considering {} as second.".format(head))
 
     with adapter_class(repo_id, config) as adapter:
         refs = adapter.get_cc_commits()
