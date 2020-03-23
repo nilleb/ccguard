@@ -26,6 +26,105 @@ def test_debug_repositories():
                 assert adapter_class.list_repositories.called_with(config)
 
 
+def test_choose_references():
+    repository_id = "abcd"
+    config = {}
+    commits = ["a", "b", "c", "d"]
+    data = "\n".join(commits)
+    adapter = MagicMock()
+    adapter.get_cc_commits = MagicMock(return_value=commits)
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
+    adapter_factory = MagicMock(return_value=adapter_class)
+    with patch.object(
+        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
+    ):
+        with patch.object(ccguard_server.ccguard, "configuration", return_value=config):
+            with ccguard_server.app.test_client() as test_client:
+                url = "/api/v1/references/{}/choose".format(repository_id)
+                import logging
+
+                logging.exception(url)
+                result = test_client.post(url, data=data)
+                assert result.status_code == 200
+                assert result.data == b"a"
+                assert adapter_factory.called_with(None, config)
+                assert adapter.get_cc_commits.called
+
+
+def test_choose_references_not_found():
+    repository_id = "abcd"
+    config = {}
+    commits = []
+    data = "\n".join(commits)
+    adapter = MagicMock()
+    adapter.get_cc_commits = MagicMock(return_value=commits)
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
+    adapter_factory = MagicMock(return_value=adapter_class)
+    with patch.object(
+        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
+    ):
+        with patch.object(ccguard_server.ccguard, "configuration", return_value=config):
+            with ccguard_server.app.test_client() as test_client:
+                url = "/api/v1/references/{}/choose".format(repository_id)
+                import logging
+
+                logging.exception(url)
+                result = test_client.post(url, data=data)
+                assert result.status_code == 404
+                assert adapter_factory.called_with(None, config)
+                assert adapter.get_cc_commits.called
+
+
+def test_compare_references():
+    repository_id = "abcd"
+    commit_id1 = "dcba"
+    commit_id2 = "efgh"
+    config = {}
+    data = b"<coverage/>"
+    adapter = MagicMock()
+    adapter.retrieve_cc_data = MagicMock(return_value=data)
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
+    adapter_factory = MagicMock(return_value=adapter_class)
+    with patch.object(
+        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
+    ):
+        with patch.object(ccguard_server.ccguard, "configuration", return_value=config):
+            with ccguard_server.app.test_client() as test_client:
+                url = (
+                    "/api/v1/references/{repository_id}/"
+                    "{commit_id1}..{commit_id2}/comparison"
+                ).format(**locals())
+                result = test_client.get(url)
+                assert result.status_code == 200
+                assert result.data == b"0"
+                assert adapter_factory.called_with(None, config)
+                assert adapter.retrieve_cc_data.called
+
+
+def test_compare_references_not_found():
+    config = {}
+    adapter = MagicMock()
+    adapter.retrieve_cc_data = MagicMock(return_value=None)
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
+    adapter_factory = MagicMock(return_value=adapter_class)
+    with patch.object(
+        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
+    ):
+        with patch.object(ccguard_server.ccguard, "configuration", return_value=config):
+            with ccguard_server.app.test_client() as test_client:
+                url = (
+                    "/api/v1/references/invalid/" "invalid..invalid/comparison"
+                ).format(**locals())
+                result = test_client.get(url)
+                assert result.status_code == 404
+                assert adapter_factory.called_with(None, config)
+                assert adapter.retrieve_cc_data.called
+
+
 def test_debug_download_reference():
     repository_id = "abcd"
     commit_id = "dcba"
