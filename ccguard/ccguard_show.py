@@ -62,6 +62,11 @@ def main(args=None, log_function=print):
 
     config = ccguard.configuration(args.repository)
     repo_id = ccguard.GitAdapter(args.repository).get_repository_id()
+
+    if args.commit_id == "HEAD":
+        head = ccguard.get_output("git rev-parse HEAD").rstrip("\n")
+        args.commit_id = head
+
     with adapter_class(repo_id, config) as adapter:
         refs = adapter.get_cc_commits()
 
