@@ -15,14 +15,14 @@ def test_debug_repositories():
     adapter_class = MagicMock()
     adapter_class.list_repositories = MagicMock(return_value=frozenset(["abc"]))
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
-        with patch.object(ccguard_server.ccguard, "configuration", return_value=config):
+    ccm = ccguard_server.ccguard
+    csm = ccguard_server
+    with patch.object(csm, "SqliteServerAdapter", return_value=adapter_factory):
+        with patch.object(ccm, "configuration", return_value=config):
             with ccguard_server.app.test_client() as test_client:
                 result = test_client.get("/api/v1/repositories/debug")
                 assert result.status_code == 200
-                assert adapter_factory.called_with(None, config)
+                assert result.data
                 assert adapter_class.list_repositories.called_with(config)
 
 
