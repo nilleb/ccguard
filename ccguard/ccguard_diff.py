@@ -1,7 +1,9 @@
-import io
 import argparse
-import ccguard
+import io
 import logging
+import sys
+
+import ccguard
 
 
 def print_diff_report(
@@ -65,15 +67,11 @@ def main(args=None, log_function=print):
     config = ccguard.configuration(args.repository)
     repo_id = ccguard.GitAdapter(args.repository).get_repository_id()
 
-    if first == "HEAD" or second == "HEAD":
-        head = ccguard.get_output("git rev-parse HEAD").rstrip("\n")
+    command = "git rev-parse {}".format(first)
+    first = ccguard.get_output(command, args.repository).rstrip("\n")
 
-        if first == "HEAD":
-            first = head
-            log_function("Considering {} as first.".format(head))
-        if second == "HEAD":
-            second = head
-            log_function("Considering {} as second.".format(head))
+    command = "git rev-parse {}".format(second)
+    second = ccguard.get_output(command, args.repository).rstrip("\n")
 
     with adapter_class(repo_id, config) as adapter:
         refs = adapter.get_cc_commits()
@@ -104,4 +102,4 @@ def main(args=None, log_function=print):
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
