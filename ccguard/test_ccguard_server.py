@@ -36,10 +36,9 @@ def test_choose_references():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
-        with patch.object(ccguard_server.ccguard, "configuration", return_value=config):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
+        with patch.object(ccm, "configuration", return_value=config):
             with ccguard_server.app.test_client() as test_client:
                 url = "/api/v1/references/{}/choose".format(repository_id)
                 import logging
@@ -62,10 +61,9 @@ def test_choose_references_not_found():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
-        with patch.object(ccguard_server.ccguard, "configuration", return_value=config):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
+        with patch.object(ccm, "configuration", return_value=config):
             with ccguard_server.app.test_client() as test_client:
                 url = "/api/v1/references/{}/choose".format(repository_id)
                 import logging
@@ -88,9 +86,8 @@ def test_compare_references():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with patch.object(ccguard_server.ccguard, "configuration", return_value=config):
             with ccguard_server.app.test_client() as test_client:
                 url = (
@@ -111,9 +108,8 @@ def test_compare_references_not_found():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with patch.object(ccguard_server.ccguard, "configuration", return_value=config):
             with ccguard_server.app.test_client() as test_client:
                 url = (
@@ -134,13 +130,11 @@ def test_debug_download_reference():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with ccguard_server.app.test_client() as test_client:
-            result = test_client.get(
-                "/api/v1/references/{}/{}/debug".format(repository_id, commit_id)
-            )
+            url = "/api/v1/references/{}/{}/debug".format(repository_id, commit_id)
+            result = test_client.get(url)
             assert result.status_code == 200
             assert result.json["commit_id"] == commit_id
             assert adapter.retrieve_cc_data.called_with(adapter, commit_id)
@@ -154,13 +148,11 @@ def test_debug_download_reference_commit_not_found():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with ccguard_server.app.test_client() as test_client:
-            result = test_client.get(
-                "/api/v1/references/{}/{}/debug".format(repository_id, commit_id)
-            )
+            url = "/api/v1/references/{}/{}/debug".format(repository_id, commit_id)
+            result = test_client.get(url)
             assert result.status_code == 200
             assert result.json["commit_id"] == commit_id
             assert result.json["data_len"] is None
@@ -176,13 +168,11 @@ def test_download_reference():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with ccguard_server.app.test_client() as test_client:
-            result = test_client.get(
-                "/api/v1/references/{}/{}/data".format(repository_id, commit_id)
-            )
+            url = "/api/v1/references/{}/{}/data".format(repository_id, commit_id)
+            result = test_client.get(url)
             assert result.status_code == 200
             assert result.data == data
             assert adapter.retrieve_cc_data.called_with(adapter, commit_id)
@@ -196,13 +186,11 @@ def test_download_reference_commit_not_found():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with ccguard_server.app.test_client() as test_client:
-            result = test_client.get(
-                "/api/v1/references/{}/{}/data".format(repository_id, commit_id)
-            )
+            url = "/api/v1/references/{}/{}/data".format(repository_id, commit_id)
+            result = test_client.get(url)
             assert result.status_code == 404
             assert adapter.retrieve_cc_data.called_with(adapter, commit_id)
 
@@ -216,13 +204,11 @@ def test_web_report():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with ccguard_server.app.test_client() as test_client:
-            result = test_client.get(
-                "/web/report/{}/{}".format(repository_id, commit_id)
-            )
+            url = "/web/report/{}/{}".format(repository_id, commit_id)
+            result = test_client.get(url)
             assert result.status_code == 200
             assert adapter.retrieve_cc_data.called_with(adapter, commit_id)
 
@@ -235,13 +221,11 @@ def test_web_report_not_found():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with ccguard_server.app.test_client() as test_client:
-            result = test_client.get(
-                "/web/report/{}/{}".format(repository_id, commit_id)
-            )
+            url = "/web/report/{}/{}".format(repository_id, commit_id)
+            result = test_client.get(url)
             assert result.status_code == 404
             assert adapter.retrieve_cc_data.called_with(adapter, commit_id)
 
@@ -255,13 +239,11 @@ def test_web_diff():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with ccguard_server.app.test_client() as test_client:
-            result = test_client.get(
-                "/web/diff/{}/{}..{}".format(repository_id, commit_id, commit_id)
-            )
+            url = "/web/diff/{}/{}..{}".format(repository_id, commit_id, commit_id)
+            result = test_client.get(url)
             assert result.status_code == 200
             assert adapter.retrieve_cc_data.called_with(adapter, commit_id)
 
@@ -274,13 +256,11 @@ def test_web_diff_not_found():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with ccguard_server.app.test_client() as test_client:
-            result = test_client.get(
-                "/web/diff/{}/{}..{}".format(repository_id, commit_id, commit_id)
-            )
+            url = "/web/diff/{}/{}..{}".format(repository_id, commit_id, commit_id)
+            result = test_client.get(url)
             assert result.status_code == 404
             assert adapter.retrieve_cc_data.called_with(adapter, commit_id)
 
@@ -294,14 +274,11 @@ def test_put_reference():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with ccguard_server.app.test_client() as test_client:
-            result = test_client.put(
-                "/api/v1/references/{}/{}/data".format(repository_id, commit_id),
-                data=data,
-            )
+            url = "/api/v1/references/{}/{}/data".format(repository_id, commit_id)
+            result = test_client.put(url, data=data,)
             assert result.status_code == 200
             assert "received" in result.data.decode("utf-8")
             assert adapter.persist.called
@@ -319,14 +296,11 @@ def test_put_reference_raising():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(
-        ccguard_server.ccguard, "adapter_factory", return_value=adapter_factory
-    ):
+    ccm = ccguard_server.ccguard
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with ccguard_server.app.test_client() as test_client:
-            result = test_client.put(
-                "/api/v1/references/{}/{}/data".format(repository_id, commit_id),
-                data=None,
-            )
+            url = "/api/v1/references/{}/{}/data".format(repository_id, commit_id)
+            result = test_client.put(url, data=None,)
             assert result.status_code != 200
 
 
