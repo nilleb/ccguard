@@ -12,6 +12,7 @@ from .ccguard import (  # noqa
     normalize_report_paths,
     determine_parent_commit,
     has_better_coverage,
+    get_output,
 )
 
 __version__ = "0.5.0"

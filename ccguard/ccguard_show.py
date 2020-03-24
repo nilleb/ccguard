@@ -1,8 +1,9 @@
-import io
-import sys
 import argparse
-import ccguard
+import io
 import logging
+import sys
+
+import ccguard
 
 
 def normalize_report_paths(reference_fd, source):
@@ -63,9 +64,8 @@ def main(args=None, log_function=print):
     config = ccguard.configuration(args.repository)
     repo_id = ccguard.GitAdapter(args.repository).get_repository_id()
 
-    if args.commit_id == "HEAD":
-        head = ccguard.get_output("git rev-parse HEAD").rstrip("\n")
-        args.commit_id = head
+    command = "git rev-parse {}".format(args.commit_id)
+    args.commit_id = ccguard.get_output(command, args.repository).rstrip("\n")
 
     with adapter_class(repo_id, config) as adapter:
         refs = adapter.get_cc_commits()

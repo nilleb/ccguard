@@ -127,6 +127,13 @@ ccguard_server
 
 You could be interested to know how to [setup the server](https://github.com/nilleb/ccguard/blob/master/docs/server-setup/server-setup-ubuntu.sh).
 
+## alternatives to this software
+
+- [diff-cover](https://github.com/Bachmann1234/diff_cover)
+- [codecov.io](https://codecov.io/)
+- [coveralls.io](https://coveralls.io/)
+- [sonarqube](https://www.sonarqube.org/)
+
 ## credits
 
 - [Alexandre Conrad](https://pypi.org/user/aconrad/) for his wonderful pycobertura
