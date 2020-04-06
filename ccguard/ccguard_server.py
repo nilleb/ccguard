@@ -10,7 +10,7 @@ import threading
 import flask
 import lxml
 import requests
-from flask import abort, jsonify, request
+from flask import abort, jsonify, request, render_template
 from pycobertura import Cobertura, CoberturaDiff
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 from colour import Color
@@ -45,20 +45,7 @@ def check_auth():
 
 @app.route("/", methods=["GET"])
 def home():
-    return (
-        "<h1>CCGuard Server</h1>"
-        '<p>The <a href="{}">CCGuard</a> prototype API.</p>'
-        "<p>CCGuard allows you to upload code coverage reports, "
-        "list and download the past reports.</p>"
-        '<p>Please read <a href="{}">the documentation</a> about '
-        "how to setup your CircleCI workflow.</p>"
-        "<p>Contact the owner of this server (me at nilleb dot com) "
-        "in order to get an access token.</p>"
-    ).format(
-        "https://github.com/nilleb/ccguard",
-        "https://github.com/nilleb/ccguard/blob/master/"
-        "docs/how%20to%20integrate%20ccguard%20in%20your%20CircleCI%20job.md",
-    )
+    return render_template("index.html", version=ccguard.__version__)
 
 
 class SqliteServerAdapter(object):
