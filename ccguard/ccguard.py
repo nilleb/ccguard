@@ -194,17 +194,20 @@ class ReferenceAdapter(object):
     def __exit__(self, exc_type, exc_value, traceback):
         pass
 
-    def get_cc_commits(self) -> frozenset:
-        raise NotImplementedError()
+    def get_cc_commits(self, count: int = -1, branch=None) -> frozenset:
+        raise NotImplementedError
 
     def retrieve_cc_data(self, commit_id: str) -> Optional[bytes]:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def persist(self, commit_id: str, data: bytes):
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def dump(self) -> list:
-        raise NotImplementedError()
+        raise NotImplementedError
+
+    def get_commit_info(self, commit_id: str) -> (float, int, int):
+        raise NotImplementedError
 
 
 class SqliteAdapter(ReferenceAdapter):
@@ -218,15 +221,26 @@ class SqliteAdapter(ReferenceAdapter):
     def __exit__(self, exc_type, exc_value, traceback):
         self.conn.close()
 
-    def get_cc_commits(self) -> frozenset:
+    def get_cc_commits(self, count: int = -1, branch=None) -> frozenset:
+        limit_clause = "LIMIT {}".format(count) if count > 0 else ""
         commits_query = (
             "SELECT commit_id "
             "FROM timestamped_coverage_{repository_id} "
-            "ORDER BY collected_at DESC"
-        ).format(repository_id=self.repository_id)
+            "ORDER BY collected_at DESC "
+            "{limit_clause}"
+        ).format(limit_clause=limit_clause, repository_id=self.repository_id)
         return frozenset(
             c for ct in self.conn.execute(commits_query).fetchall() for c in ct
         )
+
+    def get_commit_info(self, commit_id: str) -> (float, int, int):
+        commit_query = (
+            "SELECT line_rate, lines_covered, lines_valid "
+            "FROM timestamped_coverage_{repository_id} "
+            "WHERE commit_id = '{commit_id}';"
+        ).format(repository_id=self.repository_id, commit_id=commit_id)
+        one = self.conn.execute(commit_query).fetchone()
+        return one
 
     def _update_lts(self, commit_id, path):
         query = (
@@ -332,10 +346,19 @@ class WebAdapter(ReferenceAdapter):
         self.token = token if token else config.get(conf_key, None)
         super().__init__(repository_id, config)
 
-    def get_cc_commits(self) -> frozenset:
-        r = requests.get(
-            "{p.server}/api/v1/references/{p.repository_id}/all".format(p=self)
-        )
+    def get_cc_commits(self, count: int = -1, branch=None) -> frozenset:
+        options = [
+            "count={}".format(count) if count > 0 else "",
+            "branch={}".format(branch) if branch else "",
+        ]
+        options = [opt for opt in options if opt]
+        options = "?{}".format("&".join(options)) if options else ""
+
+        uri = "{p.server}/api/v1/references/{p.repository_id}/all{options}"
+        uri = uri.format(p=self, options=options)
+
+        r = requests.get(uri)
+
         try:
             return frozenset(r.json())
         except json.decoder.JSONDecodeError:
