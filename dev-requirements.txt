@@ -13,3 +13,4 @@ requests==2.22.0
 lxml==4.4.2
 mypy==0.761
 isort
+colour
