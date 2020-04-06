@@ -1,11 +1,12 @@
 import os
 from unittest.mock import MagicMock, call, patch
 
-from . import ccguard_server
+from . import ccguard_server as csm
+from .ccguard_server import ccguard as ccm
 
 
 def test_home():
-    with ccguard_server.app.test_client() as test_client:
+    with csm.app.test_client() as test_client:
         result = test_client.get("/")
         assert result.status_code == 200
 
@@ -15,11 +16,9 @@ def test_debug_repositories():
     adapter_class = MagicMock()
     adapter_class.list_repositories = MagicMock(return_value=frozenset(["abc"]))
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
-    csm = ccguard_server
     with patch.object(csm, "SqliteServerAdapter", return_value=adapter_factory):
         with patch.object(ccm, "configuration", return_value=config):
-            with ccguard_server.app.test_client() as test_client:
+            with csm.app.test_client() as test_client:
                 result = test_client.get("/api/v1/repositories/debug")
                 assert result.status_code == 200
                 assert result.data
@@ -36,10 +35,9 @@ def test_choose_references():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with patch.object(ccm, "configuration", return_value=config):
-            with ccguard_server.app.test_client() as test_client:
+            with csm.app.test_client() as test_client:
                 url = "/api/v1/references/{}/choose".format(repository_id)
                 import logging
 
@@ -61,14 +59,10 @@ def test_choose_references_not_found():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with patch.object(ccm, "configuration", return_value=config):
-            with ccguard_server.app.test_client() as test_client:
+            with csm.app.test_client() as test_client:
                 url = "/api/v1/references/{}/choose".format(repository_id)
-                import logging
-
-                logging.exception(url)
                 result = test_client.post(url, data=data)
                 assert result.status_code == 404
                 assert adapter_factory.called_with(None, config)
@@ -86,10 +80,9 @@ def test_compare_references():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
-        with patch.object(ccguard_server.ccguard, "configuration", return_value=config):
-            with ccguard_server.app.test_client() as test_client:
+        with patch.object(ccm, "configuration", return_value=config):
+            with csm.app.test_client() as test_client:
                 url = (
                     "/api/v1/references/{repository_id}/"
                     "{commit_id1}..{commit_id2}/comparison"
@@ -108,10 +101,9 @@ def test_compare_references_not_found():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
-        with patch.object(ccguard_server.ccguard, "configuration", return_value=config):
-            with ccguard_server.app.test_client() as test_client:
+        with patch.object(ccm, "configuration", return_value=config):
+            with csm.app.test_client() as test_client:
                 url = (
                     "/api/v1/references/invalid/" "invalid..invalid/comparison"
                 ).format(**locals())
@@ -130,9 +122,8 @@ def test_debug_download_reference():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
-        with ccguard_server.app.test_client() as test_client:
+        with csm.app.test_client() as test_client:
             url = "/api/v1/references/{}/{}/debug".format(repository_id, commit_id)
             result = test_client.get(url)
             assert result.status_code == 200
@@ -148,9 +139,8 @@ def test_debug_download_reference_commit_not_found():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
-        with ccguard_server.app.test_client() as test_client:
+        with csm.app.test_client() as test_client:
             url = "/api/v1/references/{}/{}/debug".format(repository_id, commit_id)
             result = test_client.get(url)
             assert result.status_code == 200
@@ -168,9 +158,8 @@ def test_download_reference():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
-        with ccguard_server.app.test_client() as test_client:
+        with csm.app.test_client() as test_client:
             url = "/api/v1/references/{}/{}/data".format(repository_id, commit_id)
             result = test_client.get(url)
             assert result.status_code == 200
@@ -186,9 +175,8 @@ def test_download_reference_commit_not_found():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
-        with ccguard_server.app.test_client() as test_client:
+        with csm.app.test_client() as test_client:
             url = "/api/v1/references/{}/{}/data".format(repository_id, commit_id)
             result = test_client.get(url)
             assert result.status_code == 404
@@ -204,9 +192,8 @@ def test_web_report():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
-        with ccguard_server.app.test_client() as test_client:
+        with csm.app.test_client() as test_client:
             url = "/web/report/{}/{}".format(repository_id, commit_id)
             result = test_client.get(url)
             assert result.status_code == 200
@@ -221,9 +208,8 @@ def test_web_report_not_found():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
-        with ccguard_server.app.test_client() as test_client:
+        with csm.app.test_client() as test_client:
             url = "/web/report/{}/{}".format(repository_id, commit_id)
             result = test_client.get(url)
             assert result.status_code == 404
@@ -239,9 +225,8 @@ def test_web_diff():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
-        with ccguard_server.app.test_client() as test_client:
+        with csm.app.test_client() as test_client:
             url = "/web/diff/{}/{}..{}".format(repository_id, commit_id, commit_id)
             result = test_client.get(url)
             assert result.status_code == 200
@@ -256,9 +241,8 @@ def test_web_diff_not_found():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
-        with ccguard_server.app.test_client() as test_client:
+        with csm.app.test_client() as test_client:
             url = "/web/diff/{}/{}..{}".format(repository_id, commit_id, commit_id)
             result = test_client.get(url)
             assert result.status_code == 404
@@ -274,9 +258,8 @@ def test_put_reference():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
-        with ccguard_server.app.test_client() as test_client:
+        with csm.app.test_client() as test_client:
             url = "/api/v1/references/{}/{}/data".format(repository_id, commit_id)
             result = test_client.put(url, data=data,)
             assert result.status_code == 200
@@ -296,18 +279,15 @@ def test_put_reference_raising():
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)
-    ccm = ccguard_server.ccguard
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
-        with ccguard_server.app.test_client() as test_client:
+        with csm.app.test_client() as test_client:
             url = "/api/v1/references/{}/{}/data".format(repository_id, commit_id)
             result = test_client.put(url, data=None,)
             assert result.status_code != 200
 
 
 def test_parse_args():
-    args = ccguard_server.parse_args(
-        ["--adapter", "web", "--port", "1234", "--token", "aaaa"]
-    )
+    args = csm.parse_args(["--adapter", "web", "--port", "1234", "--token", "aaaa"])
     assert args.token == "aaaa"
     assert args.port == 1234
     assert args.adapter == "web"
@@ -321,12 +301,12 @@ def test_load_app():
     app = MagicMock()
     app.run = MagicMock()
     requests_mock = MagicMock()
-    ccguard_server.requests = requests_mock
+    csm.requests = requests_mock
     with patch.object(
-        ccguard_server, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
+        csm, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
     ):
-        ccguard_server.load_app("token", config={"telemetry.disable": False})
-    assert ccguard_server.app.config["TOKEN"] == "token"
+        csm.load_app("token", config={"telemetry.disable": False})
+    assert csm.app.config["TOKEN"] == "token"
     adapter.list_repositories.assert_called_once()
     requests_mock.post.assert_called_once()
 
@@ -337,13 +317,13 @@ def test_main():
     SqliteServerAdapterClass.__enter__ = MagicMock(return_value=adapter)
     adapter.list_repositories = MagicMock(return_value=frozenset([]))
     requests_mock = MagicMock()
-    ccguard_server.requests = requests_mock
+    csm.requests = requests_mock
     app = MagicMock()
     app.run = MagicMock()
     with patch.object(
-        ccguard_server, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
+        csm, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
     ):
-        ccguard_server.main([], app=app, config={"telemetry.disable": False})
+        csm.main([], app=app, config={"telemetry.disable": False})
     adapter.list_repositories.assert_called_once()
     app.run.assert_called_once()
     requests_mock.post.assert_called_once()
@@ -360,12 +340,12 @@ def test_send_event():
     app = MagicMock()
     app.run = MagicMock()
     requests_mock = MagicMock()
-    ccguard_server.requests = requests_mock
+    csm.requests = requests_mock
     with patch.object(
-        ccguard_server, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
+        csm, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
     ):
-        ccguard_server.load_app("token", config={"telemetry.disable": False})
-    assert ccguard_server.app.config["TOKEN"] == "token"
+        csm.load_app("token", config={"telemetry.disable": False})
+    assert csm.app.config["TOKEN"] == "token"
     adapter.list_repositories.assert_called_once()
     adapter.commits_count.assert_has_calls(
         [call("three"), call("two"), call("one")], any_order=True
@@ -384,17 +364,15 @@ def test_send_event_telemetry_disabled():
     app = MagicMock()
     app.run = MagicMock()
     requests_mock = MagicMock()
-    ccguard_server.requests = requests_mock
+    csm.requests = requests_mock
 
     with patch.object(
-        ccguard_server, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
+        csm, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
     ):
         with patch.object(
-            ccguard_server.ccguard,
-            "configuration",
-            return_value={"telemetry.disable": True},
+            csm.ccguard, "configuration", return_value={"telemetry.disable": True},
         ):
-            ccguard_server.load_app("token", config={"telemetry.disable": True})
+            csm.load_app("token", config={"telemetry.disable": True})
 
     adapter.record.assert_called_once()
     adapter.list_repositories.assert_called_once()
@@ -408,27 +386,23 @@ def test_sqlite_server_adapter():
     try:
         test_db_path = "./ccguard.server.db"
         config = {"sqlite.dbpath": test_db_path, "telemetry.disable": True}
-        with ccguard_server.SqliteServerAdapter(config) as adapter:
+        with csm.SqliteServerAdapter(config) as adapter:
             assert not adapter.list_repositories()
-            with ccguard_server.ccguard.SqliteAdapter(
-                "test", config=config
-            ) as repo_adapter:
+            with csm.ccguard.SqliteAdapter("test", config=config) as repo_adapter:
                 repo_adapter.persist("fake_commit_id", b"<coverage/>")
             assert "test" in adapter.list_repositories()
             assert adapter.commits_count("test") == 1
             totals = adapter.totals()
             assert not totals.keys()
-            ccguard_server.send_telemetry_event(config)
+            csm.send_telemetry_event(config)
             totals = adapter.totals()
             version = list(totals.keys())[0]
             assert totals[version]["servers"] == 1
             assert totals[version]["served_repositories"] == 1
             assert totals[version]["recorded_commits"] == 1
-            with ccguard_server.ccguard.SqliteAdapter(
-                "test", config=config
-            ) as repo_adapter:
+            with csm.ccguard.SqliteAdapter("test", config=config) as repo_adapter:
                 repo_adapter.persist("fake_commit_id2", b"<coverage/>")
-            ccguard_server.send_telemetry_event(config)
+            csm.send_telemetry_event(config)
             totals = adapter.totals()
             assert totals[version]["servers"] == 1
             assert totals[version]["served_repositories"] == 1
