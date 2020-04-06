@@ -13,6 +13,7 @@ import requests
 from flask import abort, jsonify, request
 from pycobertura import Cobertura, CoberturaDiff
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
+from colour import Color
 
 import ccguard
 
@@ -266,6 +267,84 @@ def api_references_debug(repository_id):
         )
 
     return jsonify({"repository_id": repository_id, "data": output})
+
+
+BADGE_FORMAT = """<svg xmlns="http://www.w3.org/2000/svg" width="112" height="20">
+    <linearGradient id="b" x2="0" y2="100%">
+        <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+        <stop offset="1" stop-opacity=".1"/>
+    </linearGradient>
+    <mask id="a">
+        <rect width="96" height="20" rx="3" fill="#fff"/>
+    </mask>
+    <g mask="url(#a)">
+        <path fill="#555" d="M0 0h60v20H0z"/>
+        <path fill="{color}" d="M60 0h36v20H60z"/>
+        <path fill="url(#b)" d="M0 0h96v20H0z"/>
+    </g>
+    <g fill="#fff" text-anchor="middle"
+       font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+        <text x="30" y="15" fill="#010101" fill-opacity=".3">coverage</text>
+        <text x="30" y="14">coverage</text>
+        <text x="80" y="15" fill="#010101" fill-opacity=".3">{pct}</text>
+        <text x="80" y="14">{pct}</text>
+    </g>
+</svg>
+"""
+
+BADGE_UNKNOWN = """<svg xmlns="http://www.w3.org/2000/svg" width="137" height="20">
+    <linearGradient id="b" x2="0" y2="100%">
+        <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+        <stop offset="1" stop-opacity=".1"/>
+    </linearGradient>
+    <mask id="a">
+        <rect width="121" height="20" rx="3" fill="#fff"/>
+    </mask>
+    <g mask="url(#a)">
+        <path fill="#555" d="M0 0h60v20H0z"/>
+        <path fill="#9f9f9f" d="M60 0h61v20H60z"/>
+        <path fill="url(#b)" d="M0 0h121v20H0z"/>
+    </g>
+    <g fill="#fff" text-anchor="middle"
+       font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+        <text x="30" y="15" fill="#010101" fill-opacity=".3">coverage</text>
+        <text x="30" y="14">coverage</text>
+        <text x="89.5" y="15" fill="#010101" fill-opacity=".3">unknown</text>
+        <text x="89.5" y="14">unknown</text>
+    </g>
+</svg>
+"""
+
+
+def minimize_xml(xml):
+    parser = lxml.etree.XMLParser(remove_blank_text=True)
+    elem = lxml.etree.XML(xml, parser=parser)
+    return lxml.etree.tostring(elem)
+
+
+@app.route("/api/v1/references/<string:repository_id>/status_badge", methods=["GET"])
+def api_status_badge(repository_id):
+    branch = request.args.get("branch") or "master"
+    red = request.args.get("red") or "red"
+    green = request.args.get("green") or "green"
+    config = ccguard.configuration()
+    adapter_class = ccguard.adapter_factory(None, config)
+    with adapter_class(repository_id, config) as adapter:
+        commit_id = adapter.get_cc_commits(branch=branch, count=1)
+        if not commit_id:
+            return minimize_xml(BADGE_UNKNOWN)
+        (commit_id,) = commit_id
+
+        rate, *_ = adapter.get_commit_info(commit_id)
+        rate = int(rate) if rate > 1 else int(rate * 100)
+        rate = 100 if rate > 100 else rate
+
+        red, green = Color(red), Color(green)
+        colors = list(red.range_to(green, 100))
+
+        return minimize_xml(
+            BADGE_FORMAT.format(color=colors[rate], pct="{:d}%".format(rate))
+        )
 
 
 @app.route(

@@ -183,6 +183,44 @@ def test_download_reference_commit_not_found():
             assert adapter.retrieve_cc_data.called_with(adapter, commit_id)
 
 
+def test_status_badge():
+    repository_id = "abcd"
+    commit_id = "dcba"
+    adapter = MagicMock()
+    commits = frozenset([commit_id])
+    adapter = MagicMock()
+    adapter.get_cc_commits = MagicMock(return_value=commits)
+    adapter.get_commit_info = MagicMock(return_value=[0.17, 17, 100])
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
+    adapter_factory = MagicMock(return_value=adapter_class)
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
+        with csm.app.test_client() as test_client:
+            url = "/api/v1/references/{}/status_badge".format(repository_id)
+            result = test_client.get(url)
+            assert result.status_code == 200
+            assert b"17%" in result.data
+            assert adapter.get_commit_info.called_with(adapter, commit_id)
+
+
+def test_status_badge_unknown():
+    repository_id = "abcd"
+    adapter = MagicMock()
+    commits = frozenset([])
+    adapter = MagicMock()
+    adapter.get_cc_commits = MagicMock(return_value=commits)
+    adapter.get_commit_info = MagicMock(return_value=[0.17, 17, 100])
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
+    adapter_factory = MagicMock(return_value=adapter_class)
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
+        with csm.app.test_client() as test_client:
+            url = "/api/v1/references/{}/status_badge".format(repository_id)
+            result = test_client.get(url)
+            assert result.status_code == 200
+            assert b"unknown" in result.data
+
+
 def test_web_report():
     repository_id = "abcd"
     commit_id = "dcba"
