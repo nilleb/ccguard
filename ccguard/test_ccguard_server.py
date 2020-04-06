@@ -196,7 +196,7 @@ def test_status_badge():
     adapter_factory = MagicMock(return_value=adapter_class)
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with csm.app.test_client() as test_client:
-            url = "/api/v1/references/{}/status_badge".format(repository_id)
+            url = "/api/v1/repositories/{}/status_badge".format(repository_id)
             result = test_client.get(url)
             assert result.status_code == 200
             assert b"17%" in result.data
@@ -215,7 +215,7 @@ def test_status_badge_unknown():
     adapter_factory = MagicMock(return_value=adapter_class)
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with csm.app.test_client() as test_client:
-            url = "/api/v1/references/{}/status_badge".format(repository_id)
+            url = "/api/v1/repositories/{}/status_badge".format(repository_id)
             result = test_client.get(url)
             assert result.status_code == 200
             assert b"unknown" in result.data
