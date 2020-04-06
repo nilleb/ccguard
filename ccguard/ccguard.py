@@ -767,6 +767,7 @@ def main(args=None, log_function=print, logging_module=logging):
 
     git = GitAdapter(args.repository)
     repository_id = git.get_repository_id()
+    logging.info("Your repository ID is %s", repository_id)
 
     source = git.get_root_path()
     tree = normalize_report_paths(args.report, source)

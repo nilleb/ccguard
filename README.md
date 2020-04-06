@@ -1,6 +1,6 @@
 # ccguard
 
-[![CircleCI](https://circleci.com/gh/nilleb/ccguard.svg?style=svg)](https://circleci.com/gh/nilleb/ccguard)[![PyPI version](https://badge.fury.io/py/ccguard.svg)](https://badge.fury.io/py/ccguard)
+[![CircleCI](https://circleci.com/gh/nilleb/ccguard.svg?style=svg)](https://circleci.com/gh/nilleb/ccguard)[![PyPI version](https://badge.fury.io/py/ccguard.svg)](https://badge.fury.io/py/ccguard)[![CodeCoverage](https://ccguard.nilleb.com/api/v1/repositories/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/status_badge)](https://ccguard.nilleb.com/web/main/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8)
 
 you can only improve! :-)
 
@@ -9,6 +9,7 @@ ccguard compares the current code coverage to past code coverage. ccguard fails 
 ![ccguard.py in action](https://github.com/nilleb/ccguard/blob/master/static/success.png?raw=true "ccguard.py in action")
 ![so bad, a regression](https://github.com/nilleb/ccguard/blob/master/static/failure.png?raw=true "so bad, a regression")
 ![trends](https://github.com/nilleb/ccguard/blob/master/static/log.png "cc is increasing!")
+![all the status badges](https://github.com/nilleb/ccguard/blob/master/static/all_badges.png "expose your code coverage pride ;-)")
 
 ## requires
 
@@ -126,6 +127,16 @@ ccguard_server
 ```
 
 You could be interested to know how to [setup the server](https://github.com/nilleb/ccguard/blob/master/docs/server-setup/server-setup-ubuntu.sh).
+
+## expose a status badge
+
+Add the following Markdown to your README.md
+
+```md
+[![CodeCoverage](https://ccguard.nilleb.com/api/v1/repositories/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/status_badge)](https://ccguard.nilleb.com/web/main/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8)
+```
+
+(make sure that you change your repository_id to match the one printed by a `ccguard --debug`)
 
 ## alternatives to this software
 
