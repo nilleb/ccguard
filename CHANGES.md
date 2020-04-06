@@ -2,6 +2,10 @@
 
 ## 0.5
 
+- chore: use a template and use bootstrap
+  - better keep separated python and html
+- feature: status badge
+  - provide a status badge for every project hosted by the ccguard server
 - feature: telemetry
   - at boot, ccguard_server sends a payload to ccguard.nilleb.com, signalling the total number of hosted repositories and commits.
   - your IP address is being scrambled at reception on ccguard.nilleb.com
