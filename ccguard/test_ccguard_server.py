@@ -333,16 +333,14 @@ def test_parse_args():
 
 def test_load_app():
     adapter = MagicMock()
-    SqliteServerAdapterClass = MagicMock()
-    SqliteServerAdapterClass.__enter__ = MagicMock(return_value=adapter)
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter.list_repositories = MagicMock(return_value=frozenset([]))
     app = MagicMock()
     app.run = MagicMock()
     requests_mock = MagicMock()
     csm.requests = requests_mock
-    with patch.object(
-        csm, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
-    ):
+    with patch.object(csm, "SqliteServerAdapter", return_value=adapter_class):
         csm.load_app("token", config={"telemetry.disable": False})
     assert csm.app.config["TOKEN"] == "token"
     adapter.list_repositories.assert_called_once()
@@ -351,16 +349,14 @@ def test_load_app():
 
 def test_main():
     adapter = MagicMock()
-    SqliteServerAdapterClass = MagicMock()
-    SqliteServerAdapterClass.__enter__ = MagicMock(return_value=adapter)
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter.list_repositories = MagicMock(return_value=frozenset([]))
     requests_mock = MagicMock()
     csm.requests = requests_mock
     app = MagicMock()
     app.run = MagicMock()
-    with patch.object(
-        csm, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
-    ):
+    with patch.object(csm, "SqliteServerAdapter", return_value=adapter_class):
         csm.main([], app=app, config={"telemetry.disable": False})
     adapter.list_repositories.assert_called_once()
     app.run.assert_called_once()
@@ -369,8 +365,8 @@ def test_main():
 
 def test_send_event():
     adapter = MagicMock()
-    SqliteServerAdapterClass = MagicMock()
-    SqliteServerAdapterClass.__enter__ = MagicMock(return_value=adapter)
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter.list_repositories = MagicMock(
         return_value=frozenset(["one", "two", "three"])
     )
@@ -379,9 +375,7 @@ def test_send_event():
     app.run = MagicMock()
     requests_mock = MagicMock()
     csm.requests = requests_mock
-    with patch.object(
-        csm, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
-    ):
+    with patch.object(csm, "SqliteServerAdapter", return_value=adapter_class):
         csm.load_app("token", config={"telemetry.disable": False})
     assert csm.app.config["TOKEN"] == "token"
     adapter.list_repositories.assert_called_once()
