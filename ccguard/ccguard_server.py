@@ -11,10 +11,11 @@ import threading
 import flask
 import lxml
 import requests
-from flask import abort, jsonify, request, render_template, Response
+from colour import Color
+from flask import abort, jsonify, render_template, request, Response
 from pycobertura import Cobertura, CoberturaDiff
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
-from colour import Color
+from typing import Optional, Tuple
 
 import ccguard
 
@@ -24,7 +25,7 @@ app.config["DEBUG"] = True
 
 def authenticated(func):
     def inner(*args, **kwargs):
-        halt = check_auth()
+        halt = check_auth(request.headers, app.config)
         if halt:
             abort(*halt)
         return func(*args, **kwargs)
@@ -34,14 +35,104 @@ def authenticated(func):
     return inner
 
 
-def check_auth():
-    token = app.config.get("TOKEN", None)
+class PersonalAccessToken(object):
+    def __init__(self, user_id, value, revoked=False):
+        super().__init__()
+        self.user_id = user_id
+        self.value = value
+        self.revoked = revoked
+
+    @staticmethod
+    def get_by_value(value: str, config=None):
+        return PersonalAccessToken._get_by_value(value, config)
+
+    @staticmethod
+    def _get_connection(config=None) -> sqlite3.Connection:
+        config = config or ccguard.configuration()
+        dbpath = str(config.get("sqlite.dbpath"))
+        logging.debug("PersonalAccessToken: dbpath %s", dbpath)
+        return sqlite3.connect(dbpath)
+
+    @staticmethod
+    def _get_by_value(value: str, config=None):
+        conn = PersonalAccessToken._get_connection(config)
+
+        query = (
+            "SELECT user_id, revoked "
+            "FROM ccguard_server_tokens "
+            'WHERE value = "{}"'.format(value)
+        )
+
+        try:
+            row = conn.execute(query).fetchone()
+        except sqlite3.OperationalError:
+            row = None
+
+        if row:
+            return PersonalAccessToken(row[0], row[1], value)
+
+        return None
+
+    def commit(self, config=None) -> None:
+        if not self.value:
+            raise ValueError("Unwilling to persist invalid token.")
+
+        conn = self._create_table(config)
+        self._persist(conn)
+        conn.close()
+
+    def _persist(self, conn: sqlite3.Connection) -> None:
+        statement = (
+            "INSERT INTO ccguard_server_tokens "
+            "(user_id, value, revoked) VALUES (?, ?, ?)"
+        )
+        data_tuple = (self.user_id, self.value, self.revoked)
+        try:
+            conn.execute(statement, data_tuple)
+            conn.commit()
+        except sqlite3.IntegrityError:
+            logging.exception(
+                "Token already present in base: %s (%s)", self.value, self.user_id
+            )
+
+    @staticmethod
+    def _create_table(config=None) -> sqlite3.Connection:
+        conn = PersonalAccessToken._get_connection(config)
+
+        statement = (
+            "CREATE TABLE IF NOT EXISTS `ccguard_server_tokens` ("
+            "`user_id` varchar(255) NOT NULL, "
+            "`value` varchar(255) NOT NULL, "
+            "`revoked` INT DEFAULT 0, "
+            "PRIMARY KEY  (`value`) );"
+        )
+        conn.execute(statement)
+
+        return conn
+
+
+def check_auth(headers, config) -> Optional[Tuple[int, str]]:
+    auth = headers.get("authorization", None)
+
+    token = config.get("TOKEN", None)
     if token:
-        auth = request.headers.get("authorization", None)
         if not auth:
             return (401, "Authentication required")
-        if auth != token:
+
+    if auth:
+        if auth == token:
+            return None
+
+        pat = PersonalAccessToken.get_by_value(auth)
+
+        if not pat or pat.revoked:
+            logging.debug("%s, %s", pat, pat.revoked)
             return (403, "Forbidden")
+        else:
+            logging.info("Successfully authenticated User %s", pat.user_id)
+            return None
+
+    return None
 
 
 @app.route("/", methods=["GET"])
@@ -541,10 +632,9 @@ def load_app(token, config=None):
 
 
 def main(args=None, app=app, config=None):
-    send_telemetry_event(config)
     logging.basicConfig(level=logging.DEBUG)
     args = parse_args(args)
-    app.config["TOKEN"] = args.token
+    load_app(args.token, config)
     ssl_context = (
         (args.certificate, args.private_key)
         if args.certificate and args.private_key

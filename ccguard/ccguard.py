@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import datetime
 import os
 import requests
-from typing import Optional, Callable, Iterable
+from typing import Optional, Callable, Iterable, Tuple, List
 from contextlib import contextmanager
 from pycobertura import Cobertura, CoberturaDiff, TextReporterDelta, TextReporter
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
@@ -142,7 +142,7 @@ class GitAdapter(object):
             "git rev-parse HEAD", working_folder=self.repository_folder
         ).rstrip()
 
-    def iter_git_commits(self, refs: [str] = None) -> Iterable[str]:
+    def iter_git_commits(self, refs: List[str] = None) -> Iterable[str]:
         if not refs:
             refs = ["HEAD^"]
 
@@ -206,7 +206,7 @@ class ReferenceAdapter(object):
     def dump(self) -> list:
         raise NotImplementedError
 
-    def get_commit_info(self, commit_id: str) -> (float, int, int):
+    def get_commit_info(self, commit_id: str) -> Tuple[float, int, int]:
         raise NotImplementedError
 
 
@@ -233,7 +233,7 @@ class SqliteAdapter(ReferenceAdapter):
             c for ct in self.conn.execute(commits_query).fetchall() for c in ct
         )
 
-    def get_commit_info(self, commit_id: str) -> (float, int, int):
+    def get_commit_info(self, commit_id: str) -> Tuple[float, int, int]:
         commit_query = (
             "SELECT line_rate, lines_covered, lines_valid "
             "FROM timestamped_coverage_{repository_id} "
@@ -281,7 +281,7 @@ class SqliteAdapter(ReferenceAdapter):
         except sqlite3.IntegrityError:
             logging.warning("Unable to update the commit count.")
 
-    def _get_line_coverage(self, data: bytes) -> (float, int, int):
+    def _get_line_coverage(self, data: bytes) -> Tuple[float, int, int]:
         try:
             tree = ET.fromstring(data)
             return (
@@ -352,10 +352,10 @@ class WebAdapter(ReferenceAdapter):
             "branch={}".format(branch) if branch else "",
         ]
         options = [opt for opt in options if opt]
-        options = "?{}".format("&".join(options)) if options else ""
+        options_str = "?{}".format("&".join(options)) if options else ""
 
         uri = "{p.server}/api/v1/references/{p.repository_id}/all{options}"
-        uri = uri.format(p=self, options=options)
+        uri = uri.format(p=self, options=options_str)
 
         r = requests.get(uri)
 

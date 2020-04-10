@@ -393,8 +393,8 @@ def test_send_event():
 
 def test_send_event_telemetry_disabled():
     adapter = MagicMock()
-    SqliteServerAdapterClass = MagicMock()
-    SqliteServerAdapterClass.__enter__ = MagicMock(return_value=adapter)
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter.list_repositories = MagicMock(
         return_value=frozenset(["one", "two", "three"])
     )
@@ -404,13 +404,10 @@ def test_send_event_telemetry_disabled():
     requests_mock = MagicMock()
     csm.requests = requests_mock
 
-    with patch.object(
-        csm, "SqliteServerAdapter", return_value=SqliteServerAdapterClass
-    ):
-        with patch.object(
-            csm.ccguard, "configuration", return_value={"telemetry.disable": True},
-        ):
-            csm.load_app("token", config={"telemetry.disable": True})
+    config = {"telemetry.disable": True}
+    with patch.object(csm, "SqliteServerAdapter", return_value=adapter_class):
+        with patch.object(ccm, "configuration", return_value=config):
+            csm.load_app("token", config=config)
 
     adapter.record.assert_called_once()
     adapter.list_repositories.assert_called_once()
@@ -447,3 +444,47 @@ def test_sqlite_server_adapter():
             assert totals[version]["recorded_commits"] == 2
     finally:
         os.unlink(test_db_path)
+
+
+def test_personal_access_token():
+    try:
+        test_db_path = "./ccguard.server.db"
+        config = {"sqlite.dbpath": test_db_path}
+        pato = csm.PersonalAccessToken("ivo", "aaa", False)
+        pato.commit(config)
+        patr = csm.PersonalAccessToken.get_by_value("aaa", config=config)
+        assert patr.user_id == pato.user_id
+    finally:
+        os.unlink(test_db_path)
+
+
+def test_check_auth():
+    pat = csm.PersonalAccessToken("ivo", "toto")
+    with patch.object(csm, "PersonalAccessToken") as pat_mock:
+        config = {}
+        headers = {}
+        assert not csm.check_auth(headers, config)
+
+        config = {"TOKEN": "toto"}
+        headers = {}
+        code, message = csm.check_auth(headers, config)
+        assert code == 401
+
+        config = {"TOKEN": "toto"}
+        headers = {"authorization": "toto"}
+        assert not csm.check_auth(headers, config)
+
+        config = {}
+        headers = {"authorization": "none"}
+        code, message = csm.check_auth(headers, config)
+        assert code == 403
+
+        config = {"TOKEN": "toto"}
+        headers = {"authorization": "none"}
+        code, message = csm.check_auth(headers, config)
+        assert code == 403
+
+        pat_mock.get_by_value = MagicMock(return_value=pat)
+        config = {}
+        headers = {"authorization": "toto"}
+        assert not csm.check_auth(headers, config)
