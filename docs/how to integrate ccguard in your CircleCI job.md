@@ -13,9 +13,9 @@ Set two environment variables
 
 ```sh
 # the public address of your ccguard server
-CCGUARD_SERVER_ADDRESS=https://ccguard.your.domain
+ccguard_server_address=https://ccguard.your.domain
 # you should have setup this same token when preparing ccguard_server
-CCGUARD_TOKEN=azoudcodbqzypfuazêofvpzkecnaio
+ccguard_token=azoudcodbqzypfuazêofvpzkecnaio
 ```
 
 ## Go workflow
