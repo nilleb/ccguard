@@ -417,6 +417,16 @@ def minimize_xml(xml):
     return lxml.etree.tostring(elem)
 
 
+def get_last_commit(adapter, branch=None):
+    commit_id = adapter.get_cc_commits(branch=branch, count=1)
+
+    if not commit_id:
+        return None
+
+    (commit_id,) = commit_id
+    return commit_id
+
+
 @app.route(
     "/api/v1/repositories/<string:repository_id>/status_badge.svg", methods=["GET"]
 )
@@ -427,10 +437,9 @@ def api_status_badge(repository_id):
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
-        commit_id = adapter.get_cc_commits(branch=branch, count=1)
+        commit_id = get_last_commit(adapter, branch)
         if not commit_id:
             return minimize_xml(BADGE_UNKNOWN)
-        (commit_id,) = commit_id
 
         rate, *_ = adapter.get_commit_info(commit_id)
         rate = int(rate) if rate > 1 else int(rate * 100)
@@ -519,6 +528,20 @@ def web_generate_report(repository_id, commit_id):
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
+        reference = retrieve(adapter, commit_id)
+        if not reference:
+            abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
+        report = HtmlReporter(reference)
+        return report.generate()
+
+
+@web.route("/main/<string:repository_id>", methods=["GET"])
+def web_main(repository_id):
+    branch = request.args.get("branch") or "master"
+    config = ccguard.configuration()
+    adapter_class = ccguard.adapter_factory(None, config)
+    with adapter_class(repository_id, config) as adapter:
+        commit_id = get_last_commit(adapter, branch)
         reference = retrieve(adapter, commit_id)
         if not reference:
             abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
