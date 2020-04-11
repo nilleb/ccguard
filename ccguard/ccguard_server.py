@@ -6,16 +6,16 @@ import json
 import flask
 import requests
 
+import ccguard
+
 from .ccguard_server_blueprints import (
+    _prepare_event,
+    api_home,
     api_v1,
     api_v2,
-    web,
-    api_home,
     record_telemetry_event,
-    _prepare_event,
+    web,
 )
-
-import ccguard
 
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True

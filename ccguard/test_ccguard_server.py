@@ -529,7 +529,7 @@ def test_personal_access_token():
     try:
         test_db_path = "./ccguard.server.db"
         config = {"sqlite.dbpath": test_db_path}
-        pato = cbm.PersonalAccessToken("ivo", "aaa", False)
+        pato = cbm.PersonalAccessToken("ivo", "test name", value="aaa")
         pato.commit(config)
         patr = cbm.PersonalAccessToken.get_by_value("aaa", config=config)
         assert patr.user_id == pato.user_id
@@ -537,33 +537,52 @@ def test_personal_access_token():
         os.unlink(test_db_path)
 
 
+def test_personal_access_token_generate():
+    try:
+        test_db_path = "./ccguard.server.db"
+        config = {"sqlite.dbpath": test_db_path}
+        pato = cbm.PersonalAccessToken("ivo", "test name")
+        pato.commit(config)
+        patr = cbm.PersonalAccessToken.get_by_value(pato.value, config=config)
+        assert patr.user_id == pato.user_id
+    finally:
+        os.unlink(test_db_path)
+
+
 def test_check_auth():
     pat = cbm.PersonalAccessToken("ivo", "toto")
+    flask_global = MagicMock()
     with patch.object(cbm, "PersonalAccessToken") as pat_mock:
         config = {}
         headers = {}
-        assert not cbm.check_auth(headers, config)
+        assert not cbm.check_auth(headers, config, flask_global)
+        assert not flask_global.user
 
         config = {"TOKEN": "toto"}
         headers = {}
-        code, message = cbm.check_auth(headers, config)
+        code, message = cbm.check_auth(headers, config, flask_global)
         assert code == 401
+        assert not flask_global.user
 
         config = {"TOKEN": "toto"}
         headers = {"authorization": "toto"}
-        assert not cbm.check_auth(headers, config)
+        assert not cbm.check_auth(headers, config, flask_global)
+        assert flask_global.user == cbm.ADMIN
 
         config = {}
         headers = {"authorization": "none"}
-        code, message = cbm.check_auth(headers, config)
+        code, message = cbm.check_auth(headers, config, flask_global)
         assert code == 403
+        assert not flask_global.user
 
         config = {"TOKEN": "toto"}
         headers = {"authorization": "none"}
-        code, message = cbm.check_auth(headers, config)
+        code, message = cbm.check_auth(headers, config, flask_global)
         assert code == 403
+        assert not flask_global.user
 
         pat_mock.get_by_value = MagicMock(return_value=pat)
         config = {}
         headers = {"authorization": "toto"}
-        assert not cbm.check_auth(headers, config)
+        assert not cbm.check_auth(headers, config, flask_global)
+        assert flask_global.user == pat.user_id
