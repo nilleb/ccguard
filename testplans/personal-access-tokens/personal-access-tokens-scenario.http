@@ -1,0 +1,65 @@
+# expected: failure
+PUT http://127.0.0.1:5000/api/v1/personal_access_token/me@nilleb.com
+---
+
+# expected: failure
+PUT http://127.0.0.1:5000/api/v1/personal_access_token/me@nilleb.com
+content-type: application/json
+
+{"name": "second"}
+
+---
+PUT http://127.0.0.1:5000/api/v1/personal_access_token/me@nilleb.com
+content-type: application/json
+Authorization: aaa
+
+{"name": "second"}
+---
+
+GET http://127.0.0.1:5000/api/v1/personal_access_tokens/me@nilleb.com
+
+---
+# to complete this request use the response of the previous one to fill the authorization field
+GET http://127.0.0.1:5000/api/v1/repositories/debug
+authorization: ff4ad71e-d4f9-46a0-b68c-73bd18a67bdc
+---
+# you should have started the server with a --token aaa
+GET http://127.0.0.1:5000/api/v1/repositories/debug
+authorization: aaa
+---
+# non authenticated endpoints should keep behaving as in the past
+GET http://127.0.0.1:5000/api/v1/telemetry
+--
+# only the owner of a token, or the platform admin, can delete it
+DELETE http://127.0.0.1:5000/api/v1/personal_access_token/me@nilleb.com
+authorization: aaa
+content-type: application/json
+
+{
+"name": "second"
+}
+--
+
+PUT http://127.0.0.1:5000/api/v1/personal_access_token/ivo@nilleb.com
+content-type: application/json
+
+{"name": "first"}
+---
+
+# to execute this request use the ivo's token and check that you get a 403
+GET http://127.0.0.1:5000/api/v1/personal_access_tokens/me@nilleb.com
+authorization: da509632-2dea-4266-8244-9a49f8a80fe2
+--
+
+# but the admin can obtain the tokens for everybody
+GET http://127.0.0.1:5000/api/v1/personal_access_tokens/me@nilleb.com
+authorization: aaa
+
+--
+
+# nobody can generate a token for admin
+
+PUT http://127.0.0.1:5000/api/v1/personal_access_token/admin@local
+content-type: application/json
+
+{"name": "hijack"}

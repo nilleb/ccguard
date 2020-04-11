@@ -1,20 +1,19 @@
-import logging
-import sqlite3
-import socket
-import hashlib
 import datetime
+import hashlib
 import io
-
-import lxml
-
-from flask import abort, jsonify, render_template, request, Blueprint, current_app, Response
-from colour import Color
-from pycobertura import Cobertura, CoberturaDiff
-from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
+import logging
+import socket
+import sqlite3
+import uuid
 from typing import Optional, Tuple
 
-import ccguard
+import lxml
+from colour import Color
+from flask import Blueprint, abort, current_app, g, jsonify, render_template, request, Response
+from pycobertura import Cobertura, CoberturaDiff
+from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 
+import ccguard
 
 api_v1 = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 api_v2 = Blueprint("api_v2", __name__, url_prefix="/api/v2")
@@ -22,9 +21,12 @@ api_home = Blueprint("api_home", __name__, url_prefix="/")
 web = Blueprint("web_reports", __name__, url_prefix="/web")
 
 
+ADMIN = "admin@local"
+
+
 def authenticated(func):
     def inner(*args, **kwargs):
-        halt = check_auth(request.headers, current_app.config)
+        halt = check_auth(request.headers, current_app.config, g)
         if halt:
             abort(*halt)
         return func(*args, **kwargs)
@@ -34,11 +36,24 @@ def authenticated(func):
     return inner
 
 
+def admin_required(func):
+    def inner(*args, **kwargs):
+        success = _is_admin(current_app.config, g)
+        if not success:
+            abort(403)
+        return func(*args, **kwargs)
+
+    # Renaming the function name:
+    inner.__name__ = func.__name__
+    return inner
+
+
 class PersonalAccessToken(object):
-    def __init__(self, user_id, value, revoked=False):
+    def __init__(self, user_id, name, value=None, revoked=False):
         super().__init__()
         self.user_id = user_id
-        self.value = value
+        self.name = name
+        self.value = value or self._generate()
         self.revoked = revoked
 
     @staticmethod
@@ -53,6 +68,47 @@ class PersonalAccessToken(object):
         self._persist(conn)
         conn.close()
 
+    def _generate(self):
+        return str(uuid.uuid4())
+
+    @staticmethod
+    def list_by_user_id(user_id, config=None):
+        with PersonalAccessToken._get_connection(config) as conn:
+            query = (
+                "SELECT user_id, name, revoked "
+                "FROM ccguard_server_tokens "
+                'WHERE user_id = "{}"'.format(user_id)
+            )
+
+            try:
+                rows = conn.execute(query).fetchall()
+            except sqlite3.OperationalError:
+                rows = []
+
+            items = [
+                PersonalAccessToken(
+                    row[0], value="omitted", name=row[1], revoked=row[2]
+                )
+                for row in rows
+            ]
+            logging.debug("Returning %d tokens for %s", len(items), user_id)
+            return items
+
+    @staticmethod
+    def delete(user_id, name, config=None):
+        with PersonalAccessToken._get_connection(config) as conn:
+
+            query = (
+                "DELETE "
+                "FROM ccguard_server_tokens "
+                'WHERE user_id = "{}" and name = "{}"'.format(user_id, name)
+            )
+
+            try:
+                conn.execute(query)
+            except sqlite3.OperationalError:
+                logging.exception("Unable to delete the token %s, %s", user_id, name)
+
     @staticmethod
     def _get_connection(config=None) -> sqlite3.Connection:
         config = config or ccguard.configuration()
@@ -62,37 +118,43 @@ class PersonalAccessToken(object):
 
     @staticmethod
     def _get_by_value(value: str, config=None):
-        conn = PersonalAccessToken._get_connection(config)
+        with PersonalAccessToken._get_connection(config) as conn:
+            query = (
+                "SELECT user_id, name, revoked "
+                "FROM ccguard_server_tokens "
+                'WHERE value = "{}"'.format(value)
+            )
 
-        query = (
-            "SELECT user_id, revoked "
-            "FROM ccguard_server_tokens "
-            'WHERE value = "{}"'.format(value)
-        )
+            try:
+                row = conn.execute(query).fetchone()
+            except sqlite3.OperationalError:
+                row = None
 
-        try:
-            row = conn.execute(query).fetchone()
-        except sqlite3.OperationalError:
-            row = None
+            if row:
+                return PersonalAccessToken(
+                    row[0], value=value, name=row[1], revoked=row[2]
+                )
 
-        if row:
-            return PersonalAccessToken(row[0], row[1], value)
-
-        return None
+            return None
 
     def _persist(self, conn: sqlite3.Connection) -> None:
         statement = (
             "INSERT INTO ccguard_server_tokens "
-            "(user_id, value, revoked) VALUES (?, ?, ?)"
+            "(user_id, name, value, revoked) VALUES (?, ?, ?, ?)"
         )
-        data_tuple = (self.user_id, self.value, self.revoked)
+        data_tuple = (self.user_id, self.name, self.value, int(self.revoked))
+        logging.debug(data_tuple)
         try:
             conn.execute(statement, data_tuple)
             conn.commit()
         except sqlite3.IntegrityError:
             logging.exception(
-                "Token already present in base: %s (%s)", self.value, self.user_id
+                "Token already present in base: %s (%s - %s)",
+                self.value,
+                self.user_id,
+                self.name,
             )
+            raise ValueError
 
     @staticmethod
     def _create_table(config=None) -> sqlite3.Connection:
@@ -101,34 +163,46 @@ class PersonalAccessToken(object):
         statement = (
             "CREATE TABLE IF NOT EXISTS `ccguard_server_tokens` ("
             "`user_id` varchar(255) NOT NULL, "
+            "`name` varchar(255) NOT NULL, "
             "`value` varchar(255) NOT NULL, "
             "`revoked` INT DEFAULT 0, "
-            "PRIMARY KEY  (`value`) );"
+            "PRIMARY KEY  (`user_id`, `name`) );"
         )
         conn.execute(statement)
 
         return conn
 
 
-def check_auth(headers, config) -> Optional[Tuple[int, str]]:
+def _is_admin(app_config, flask_global):
+    token = app_config.get("TOKEN", None)
+    logging.info("token %s, accessing as %s", token, flask_global.user)
+    return not token or (token and flask_global.user == ADMIN)
+
+
+def check_auth(headers, app_config, flask_global) -> Optional[Tuple[int, str]]:
     auth = headers.get("authorization", None)
 
-    token = config.get("TOKEN", None)
+    flask_global.user = None
+
+    token = app_config.get("TOKEN", None)
     if token:
         if not auth:
             return (401, "Authentication required")
 
     if auth:
         if auth == token:
+            logging.info("Successfully authenticated admin")
+            flask_global.user = ADMIN
             return None
 
         pat = PersonalAccessToken.get_by_value(auth)
 
         if not pat or pat.revoked:
-            logging.debug("%s, %s", pat, pat.revoked)
+            logging.debug("%s, %s", pat, pat.revoked if pat else "N/A")
             return (403, "Forbidden")
         else:
             logging.info("Successfully authenticated User %s", pat.user_id)
+            flask_global.user = pat.user_id
             return None
 
     return None
@@ -246,6 +320,62 @@ def record_telemetry_event(data: dict, remote_addr: str, config: dict = None):
         adapter.record(data)
 
 
+@api_v1.route("/personal_access_token/<string:user_id>", methods=["PUT"])
+@authenticated
+@admin_required
+def api_personal_access_token_generate(user_id):
+    if user_id == ADMIN:
+        abort(403)
+
+    data = request.get_json()
+    if not data or not data.get("name"):
+        abort(400)
+
+    pats = PersonalAccessToken.list_by_user_id(user_id)
+    if len(pats) > 4:
+        logging.error("Too many PATs for user %s", user_id)
+        abort(400)
+
+    pat = PersonalAccessToken(user_id, data.get("name"))
+    try:
+        pat.commit()
+    except ValueError:
+        abort(409)
+
+    return jsonify({"value": pat.value, "user_id": pat.user_id})
+
+
+@api_v1.route("/personal_access_token/<string:user_id>", methods=["DELETE"])
+@authenticated
+def api_personal_access_token_delete(user_id):
+    if not (g.user == ADMIN or g.user == user_id):
+        abort(403)
+
+    data = request.get_json()
+    name = data.get("name", None)
+
+    if not name:
+        abort(400)
+
+    try:
+        PersonalAccessToken.delete(user_id, name)
+    except ValueError:
+        abort(400)
+
+    return {"status": "success"}
+
+
+@api_v1.route("/personal_access_tokens/<string:user_id>", methods=["GET"])
+@authenticated
+def api_personal_access_tokens_list(user_id):
+    if not (g.user == ADMIN or g.user == user_id):
+        abort(403)
+
+    pats = PersonalAccessToken.list_by_user_id(user_id)
+    logging.debug("obtained %d items for %s", len(pats), user_id)
+    return jsonify({"items": [{"name": pat.name} for pat in pats]})
+
+
 def remote_address():
     fwd_for = request.headers.get("X-Forwarded-For")
     if fwd_for is not None:
@@ -286,6 +416,7 @@ def api_repositories_debug_common():
 
 @api_v1.route("/repositories/debug", methods=["GET"])
 @authenticated
+@admin_required
 def api_repositories_debug_v1():
     response = api_repositories_debug_common()
     return jsonify(list(response))
@@ -293,6 +424,7 @@ def api_repositories_debug_v1():
 
 @api_v2.route("/repositories/debug", methods=["GET"])
 @authenticated
+@admin_required
 def api_repositories_debug_v2():
     response = api_repositories_debug_common()
     return jsonify({"repositories": list(response)})
@@ -348,6 +480,7 @@ def dump_data(repository_id):
 
 @api_v1.route("/references/<string:repository_id>/debug", methods=["GET"])
 @authenticated
+@admin_required
 def api_references_debug(repository_id):
     dump = dump_data(repository_id)
 
@@ -472,6 +605,7 @@ def api_reference_download_data(repository_id, commit_id):
     "/references/<string:repository_id>/<string:commit_id>/debug", methods=["GET"],
 )
 @authenticated
+@admin_required
 def api_reference_download_data_debug(repository_id, commit_id):
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
