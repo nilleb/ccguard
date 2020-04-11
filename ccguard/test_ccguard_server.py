@@ -2,6 +2,7 @@ import os
 from unittest.mock import MagicMock, call, patch
 
 from . import ccguard_server as csm
+from . import ccguard_server_blueprints as cbm
 from .ccguard_server import ccguard as ccm
 
 
@@ -16,10 +17,24 @@ def test_debug_repositories():
     adapter_class = MagicMock()
     adapter_class.list_repositories = MagicMock(return_value=frozenset(["abc"]))
     adapter_factory = MagicMock(return_value=adapter_class)
-    with patch.object(csm, "SqliteServerAdapter", return_value=adapter_factory):
+    with patch.object(cbm, "SqliteServerAdapter", return_value=adapter_factory):
         with patch.object(ccm, "configuration", return_value=config):
             with csm.app.test_client() as test_client:
                 result = test_client.get("/api/v1/repositories/debug")
+                assert result.status_code == 200
+                assert result.data
+                assert adapter_class.list_repositories.called_with(config)
+
+
+def test_debug_repositories_v2():
+    config = {}
+    adapter_class = MagicMock()
+    adapter_class.list_repositories = MagicMock(return_value=frozenset(["abc"]))
+    adapter_factory = MagicMock(return_value=adapter_class)
+    with patch.object(cbm, "SqliteServerAdapter", return_value=adapter_factory):
+        with patch.object(ccm, "configuration", return_value=config):
+            with csm.app.test_client() as test_client:
+                result = test_client.get("/api/v2/repositories/debug")
                 assert result.status_code == 200
                 assert result.data
                 assert adapter_class.list_repositories.called_with(config)
@@ -39,9 +54,6 @@ def test_choose_references():
         with patch.object(ccm, "configuration", return_value=config):
             with csm.app.test_client() as test_client:
                 url = "/api/v1/references/{}/choose".format(repository_id)
-                import logging
-
-                logging.exception(url)
                 result = test_client.post(url, data=data)
                 assert result.status_code == 200
                 assert result.data == b"a"
@@ -340,7 +352,7 @@ def test_load_app():
     app.run = MagicMock()
     requests_mock = MagicMock()
     csm.requests = requests_mock
-    with patch.object(csm, "SqliteServerAdapter", return_value=adapter_class):
+    with patch.object(cbm, "SqliteServerAdapter", return_value=adapter_class):
         csm.load_app("token", config={"telemetry.disable": False})
     assert csm.app.config["TOKEN"] == "token"
     adapter.list_repositories.assert_called_once()
@@ -356,11 +368,63 @@ def test_main():
     csm.requests = requests_mock
     app = MagicMock()
     app.run = MagicMock()
-    with patch.object(csm, "SqliteServerAdapter", return_value=adapter_class):
+    with patch.object(cbm, "SqliteServerAdapter", return_value=adapter_class):
         csm.main([], app=app, config={"telemetry.disable": False})
     adapter.list_repositories.assert_called_once()
     app.run.assert_called_once()
     requests_mock.post.assert_called_once()
+
+
+def test_telemetry_post_no_data():
+    adapter = MagicMock()
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
+    adapter.record = MagicMock()
+    adapter.commits_count = MagicMock(side_effect=lambda x: len(x))
+    with patch.object(cbm, "SqliteServerAdapter", return_value=adapter_class):
+        with csm.app.test_client() as test_client:
+            url = "/api/v1/telemetry"
+            result = test_client.post(url, data={})
+            assert result.status_code == 200
+            adapter.record.assert_not_called
+
+
+def test_telemetry_post_data():
+    adapter = MagicMock()
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
+    adapter.record = MagicMock()
+    adapter.commits_count = MagicMock(side_effect=lambda x: len(x))
+    with patch.object(cbm, "SqliteServerAdapter", return_value=adapter_class):
+        with csm.app.test_client() as test_client:
+            url = "/api/v1/telemetry"
+            result = test_client.post(
+                url, data='{"repositories_count": 1}', content_type="application/json"
+            )
+            assert result.status_code == 200
+            adapter.record.assert_called_once
+
+
+def test_telemetry_get():
+    adapter = MagicMock()
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
+    adapter.totals = MagicMock(
+        return_value={
+            "0.4.2": {
+                "servers": 1,
+                "served_repositories": 0,
+                "recorded_commits": 0,
+            }  # noqa
+        }
+    )
+    adapter.commits_count = MagicMock(side_effect=lambda x: len(x))
+    with patch.object(cbm, "SqliteServerAdapter", return_value=adapter_class):
+        with csm.app.test_client() as test_client:
+            url = "/api/v1/telemetry"
+            result = test_client.get(url)
+            assert result.status_code == 200
+            adapter.totals.assert_called_once
 
 
 def test_send_event():
@@ -375,7 +439,7 @@ def test_send_event():
     app.run = MagicMock()
     requests_mock = MagicMock()
     csm.requests = requests_mock
-    with patch.object(csm, "SqliteServerAdapter", return_value=adapter_class):
+    with patch.object(cbm, "SqliteServerAdapter", return_value=adapter_class):
         csm.load_app("token", config={"telemetry.disable": False})
     assert csm.app.config["TOKEN"] == "token"
     adapter.list_repositories.assert_called_once()
@@ -399,7 +463,7 @@ def test_send_event_telemetry_disabled():
     csm.requests = requests_mock
 
     config = {"telemetry.disable": True}
-    with patch.object(csm, "SqliteServerAdapter", return_value=adapter_class):
+    with patch.object(cbm, "SqliteServerAdapter", return_value=adapter_class):
         with patch.object(ccm, "configuration", return_value=config):
             csm.load_app("token", config=config)
 
@@ -415,7 +479,7 @@ def test_sqlite_server_adapter():
     try:
         test_db_path = "./ccguard.server.db"
         config = {"sqlite.dbpath": test_db_path, "telemetry.disable": True}
-        with csm.SqliteServerAdapter(config) as adapter:
+        with cbm.SqliteServerAdapter(config) as adapter:
             assert not adapter.list_repositories()
             with csm.ccguard.SqliteAdapter("test", config=config) as repo_adapter:
                 repo_adapter.persist("fake_commit_id", b"<coverage/>")
@@ -444,41 +508,41 @@ def test_personal_access_token():
     try:
         test_db_path = "./ccguard.server.db"
         config = {"sqlite.dbpath": test_db_path}
-        pato = csm.PersonalAccessToken("ivo", "aaa", False)
+        pato = cbm.PersonalAccessToken("ivo", "aaa", False)
         pato.commit(config)
-        patr = csm.PersonalAccessToken.get_by_value("aaa", config=config)
+        patr = cbm.PersonalAccessToken.get_by_value("aaa", config=config)
         assert patr.user_id == pato.user_id
     finally:
         os.unlink(test_db_path)
 
 
 def test_check_auth():
-    pat = csm.PersonalAccessToken("ivo", "toto")
-    with patch.object(csm, "PersonalAccessToken") as pat_mock:
+    pat = cbm.PersonalAccessToken("ivo", "toto")
+    with patch.object(cbm, "PersonalAccessToken") as pat_mock:
         config = {}
         headers = {}
-        assert not csm.check_auth(headers, config)
+        assert not cbm.check_auth(headers, config)
 
         config = {"TOKEN": "toto"}
         headers = {}
-        code, message = csm.check_auth(headers, config)
+        code, message = cbm.check_auth(headers, config)
         assert code == 401
 
         config = {"TOKEN": "toto"}
         headers = {"authorization": "toto"}
-        assert not csm.check_auth(headers, config)
+        assert not cbm.check_auth(headers, config)
 
         config = {}
         headers = {"authorization": "none"}
-        code, message = csm.check_auth(headers, config)
+        code, message = cbm.check_auth(headers, config)
         assert code == 403
 
         config = {"TOKEN": "toto"}
         headers = {"authorization": "none"}
-        code, message = csm.check_auth(headers, config)
+        code, message = cbm.check_auth(headers, config)
         assert code == 403
 
         pat_mock.get_by_value = MagicMock(return_value=pat)
         config = {}
         headers = {"authorization": "toto"}
-        assert not csm.check_auth(headers, config)
+        assert not cbm.check_auth(headers, config)
