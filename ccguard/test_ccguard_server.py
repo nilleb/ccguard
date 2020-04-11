@@ -233,6 +233,27 @@ def test_status_badge_unknown():
             assert b"unknown" in result.data
 
 
+def test_web_main():
+    repository_id = "abcd"
+    commit_id = "dcba"
+    data = b"""<coverage line-rate="0.791" />"""
+    adapter = MagicMock()
+    adapter.retrieve_cc_data = MagicMock(return_value=data)
+    commits = frozenset([commit_id])
+    adapter.get_cc_commits = MagicMock(return_value=commits)
+    adapter.get_commit_info = MagicMock(return_value=[0.17, 17, 100])
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
+    adapter_factory = MagicMock(return_value=adapter_class)
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
+        with csm.app.test_client() as test_client:
+            url = "/web/main/{}".format(repository_id)
+            result = test_client.get(url)
+            assert result.status_code == 200
+            assert b"79.10%" in result.data
+            assert adapter.get_commit_info.called_with(adapter, commit_id)
+
+
 def test_web_report():
     repository_id = "abcd"
     commit_id = "dcba"
