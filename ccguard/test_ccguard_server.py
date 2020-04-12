@@ -1,4 +1,5 @@
 import os
+from sqlite3 import IntegrityError
 from unittest.mock import MagicMock, call, patch
 
 from . import ccguard_server as csm
@@ -10,6 +11,151 @@ def test_home():
     with csm.app.test_client() as test_client:
         result = test_client.get("/")
         assert result.status_code == 200
+
+
+def test_put_token_missing_data():
+    with patch.object(cbm, "PersonalAccessToken") as pat_mock:
+        pat_mock.list_by_user_id = MagicMock(return_value=[])
+        with csm.app.test_client() as test_client:
+            result = test_client.put("/api/v1/personal_access_token/me@example.com")
+            assert result.status_code == 400
+            assert result.data
+
+
+def test_put_token():
+    name = "hello world!"
+    data = '{"name": "%s"}' % name
+    user_id = "me@example.com"
+    with patch.object(cbm, "sqlite3") as sqlite_mock:
+        sqlite_mock.connect = MagicMock()
+        with csm.app.test_client() as test_client:
+            result = test_client.put(
+                "/api/v1/personal_access_token/{}".format(user_id),
+                data=data,
+                content_type="application/json",
+            )
+            assert result.status_code == 200
+            assert user_id.encode("utf-8") in result.data
+            assert name.encode("utf-8") in result.data
+
+
+def test_put_token_already():
+    name = "hello world!"
+    data = '{"name": "%s"}' % name
+    user_id = "me@example.com"
+    with patch.object(cbm, "sqlite3") as mock_sqlite:
+        connection = MagicMock()
+
+        def execute_mock(*args):
+            if len(args) > 1:
+                raise IntegrityError
+
+        connection.execute = MagicMock(side_effect=execute_mock)
+        mock_sqlite.connect = MagicMock(return_value=connection)
+        mock_sqlite.IntegrityError = IntegrityError
+        with csm.app.test_client() as test_client:
+            result = test_client.put(
+                "/api/v1/personal_access_token/{}".format(user_id),
+                data=data,
+                content_type="application/json",
+            )
+            assert result.status_code == 409
+
+
+def test_delete_token_no_auth():
+    name = "hello world!"
+    data = '{"name": "%s"}' % name
+    user_id = "me@example.com"
+    with csm.app.test_client() as test_client:
+        result = test_client.delete(
+            "/api/v1/personal_access_token/{}".format(user_id),
+            data=data,
+            content_type="application/json",
+        )
+        assert result.status_code == 403
+
+
+def test_delete_token():
+    name = "hello world!"
+    data = '{"name": "%s"}' % name
+    user_id = "me@example.com"
+    with patch.object(cbm, "sqlite3"):
+        with patch.object(cbm, "check_auth") as mock_auth:
+
+            def set_user(a, b, g):
+                g.user = user_id
+
+            mock_auth.side_effect = set_user
+
+            with csm.app.test_client() as test_client:
+                result = test_client.delete(
+                    "/api/v1/personal_access_token/{}".format(user_id),
+                    data=data,
+                    content_type="application/json",
+                )
+                assert result.status_code == 200
+
+
+def test_get_tokens_no_auth():
+    user_id = "me@example.com"
+    with patch.object(cbm, "sqlite3") as sqlite_mock:
+        sqlite_mock.connect = MagicMock()
+        with csm.app.test_client() as test_client:
+            result = test_client.get(
+                "/api/v1/personal_access_tokens/{}".format(user_id),
+                content_type="application/json",
+            )
+            assert result.status_code == 403
+
+
+def test_get_tokens():
+    user_id = "me@example.com"
+    with patch.object(cbm, "sqlite3") as sqlite_mock:
+        with patch.object(cbm, "check_auth") as mock_auth:
+
+            def set_user(a, b, g):
+                g.user = user_id
+
+            mock_auth.side_effect = set_user
+            sqlite_mock.connect = MagicMock()
+
+            with csm.app.test_client() as test_client:
+                result = test_client.get(
+                    "/api/v1/personal_access_tokens/{}".format(user_id),
+                    content_type="application/json",
+                )
+                assert result.status_code == 200
+                assert b"[]" in result.data
+
+
+def test_get_tokens_some():
+    name = "hello world!"
+    user_id = "me@example.com"
+    with patch.object(cbm, "sqlite3") as sqlite_mock:
+        with patch.object(cbm, "check_auth") as mock_auth:
+
+            def set_user(a, b, g):
+                g.user = user_id
+
+            mock_auth.side_effect = set_user
+
+            def execute_fetchall_mock(*args):
+                return [(user_id, name, 0)]
+
+            previous, pprevious, ppprevious = MagicMock(), MagicMock(), MagicMock()
+            ppprevious.fetchall = MagicMock(side_effect=execute_fetchall_mock)
+            pprevious.execute = MagicMock(return_value=ppprevious)
+            previous.__enter__ = MagicMock(return_value=pprevious)
+            sqlite_mock.connect = MagicMock(return_value=previous)
+
+            with csm.app.test_client() as test_client:
+                result = test_client.get(
+                    "/api/v1/personal_access_tokens/{}".format(user_id),
+                    content_type="application/json",
+                )
+                assert result.status_code == 200
+                assert b"[]" not in result.data
+                assert name.encode("utf-8") in result.data
 
 
 def test_debug_repositories():

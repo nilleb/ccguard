@@ -143,7 +143,6 @@ class PersonalAccessToken(object):
             "(user_id, name, value, revoked) VALUES (?, ?, ?, ?)"
         )
         data_tuple = (self.user_id, self.name, self.value, int(self.revoked))
-        logging.debug(data_tuple)
         try:
             conn.execute(statement, data_tuple)
             conn.commit()
@@ -342,7 +341,7 @@ def api_personal_access_token_generate(user_id):
     except ValueError:
         abort(409)
 
-    return jsonify({"value": pat.value, "user_id": pat.user_id})
+    return jsonify({"value": pat.value, "user_id": pat.user_id, "name": pat.name})
 
 
 @api_v1.route("/personal_access_token/<string:user_id>", methods=["DELETE"])
