@@ -53,7 +53,7 @@ class PersonalAccessToken(object):
         super().__init__()
         self.user_id = user_id
         self.name = name
-        self.value = value or self._generate()
+        self.value = value
         self.revoked = revoked
 
     @staticmethod
@@ -64,12 +64,17 @@ class PersonalAccessToken(object):
         if not self.value:
             raise ValueError("Unwilling to persist invalid token.")
 
-        conn = self._create_table(config)
-        self._persist(conn)
-        conn.close()
+        with PersonalAccessToken._get_connection(config) as conn:
+            self._create_table(conn)
+            self._persist(conn)
 
-    def _generate(self):
-        return str(uuid.uuid4())
+    @staticmethod
+    def generate_value(config=None):
+        possible = str(uuid.uuid4())
+        # there might be a collision between two token values
+        while PersonalAccessToken.get_by_value(possible, config):
+            possible = str(uuid.uuid4())
+        return possible
 
     @staticmethod
     def list_by_user_id(user_id, config=None):
@@ -87,7 +92,7 @@ class PersonalAccessToken(object):
 
             items = [
                 PersonalAccessToken(
-                    row[0], value="omitted", name=row[1], revoked=row[2]
+                    user_id=row[0], name=row[1], value="omitted", revoked=row[2]
                 )
                 for row in rows
             ]
@@ -132,7 +137,7 @@ class PersonalAccessToken(object):
 
             if row:
                 return PersonalAccessToken(
-                    row[0], value=value, name=row[1], revoked=row[2]
+                    user_id=row[0], name=row[1], value=value, revoked=row[2]
                 )
 
             return None
@@ -156,9 +161,7 @@ class PersonalAccessToken(object):
             raise ValueError
 
     @staticmethod
-    def _create_table(config=None) -> sqlite3.Connection:
-        conn = PersonalAccessToken._get_connection(config)
-
+    def _create_table(conn):
         statement = (
             "CREATE TABLE IF NOT EXISTS `ccguard_server_tokens` ("
             "`user_id` varchar(255) NOT NULL, "
@@ -168,8 +171,6 @@ class PersonalAccessToken(object):
             "PRIMARY KEY  (`user_id`, `name`) );"
         )
         conn.execute(statement)
-
-        return conn
 
 
 def _is_admin(app_config, flask_global):
@@ -335,7 +336,9 @@ def api_personal_access_token_generate(user_id):
         logging.error("Too many PATs for user %s", user_id)
         abort(400)
 
-    pat = PersonalAccessToken(user_id, data.get("name"))
+    value = PersonalAccessToken.generate_value()
+    pat = PersonalAccessToken(user_id, data.get("name"), value)
+
     try:
         pat.commit()
     except ValueError:

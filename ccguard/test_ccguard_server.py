@@ -28,6 +28,10 @@ def test_put_token():
     user_id = "me@example.com"
     with patch.object(cbm, "sqlite3") as sqlite_mock:
         sqlite_mock.connect = MagicMock()
+        fetchone = MagicMock(fetchone=MagicMock(return_value=None))
+        execute = MagicMock(execute=MagicMock(return_value=fetchone))
+        enter = MagicMock(__enter__=MagicMock(return_value=execute))
+        sqlite_mock.connect = MagicMock(return_value=enter)
         with csm.app.test_client() as test_client:
             result = test_client.put(
                 "/api/v1/personal_access_token/{}".format(user_id),
@@ -43,16 +47,19 @@ def test_put_token_already():
     name = "hello world!"
     data = '{"name": "%s"}' % name
     user_id = "me@example.com"
-    with patch.object(cbm, "sqlite3") as mock_sqlite:
-        connection = MagicMock()
+    with patch.object(cbm, "sqlite3") as sqlite_mock:
 
         def execute_mock(*args):
             if len(args) > 1:
                 raise IntegrityError
+            else:
+                return fetchone
 
-        connection.execute = MagicMock(side_effect=execute_mock)
-        mock_sqlite.connect = MagicMock(return_value=connection)
-        mock_sqlite.IntegrityError = IntegrityError
+        fetchone = MagicMock(fetchone=MagicMock(return_value=None))
+        execute = MagicMock(execute=MagicMock(side_effect=execute_mock))
+        enter = MagicMock(__enter__=MagicMock(return_value=execute))
+        sqlite_mock.connect = MagicMock(return_value=enter)
+        sqlite_mock.IntegrityError = IntegrityError
         with csm.app.test_client() as test_client:
             result = test_client.put(
                 "/api/v1/personal_access_token/{}".format(user_id),
@@ -687,7 +694,7 @@ def test_personal_access_token_generate():
     try:
         test_db_path = "./ccguard.server.db"
         config = {"sqlite.dbpath": test_db_path}
-        pato = cbm.PersonalAccessToken("ivo", "test name")
+        pato = cbm.PersonalAccessToken("ivo", "test name", "aaa")
         pato.commit(config)
         patr = cbm.PersonalAccessToken.get_by_value(pato.value, config=config)
         assert patr.user_id == pato.user_id
