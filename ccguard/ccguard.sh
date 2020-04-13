@@ -25,6 +25,9 @@ while [ "$1" != "" ]; do
         --hard-minimum )        shift
                                 hard_minimum=$1
                                 ;;
+        --repository-id )       shift
+                                repository_id=$1
+                                ;;
         * )                     coverage_xml=$1
                                 ;;
     esac
@@ -40,13 +43,27 @@ else
 fi
 
 # MAIN LOGIC
-repository_id=`git rev-list --max-parents=0 HEAD`
+computed_repository_id=`git rev-list --max-parents=0 HEAD`
+
+if [[ -z $repository_id ]]; then
+    repository_id=$computed_repository_id
+fi
+
 commit_id=`git rev-parse HEAD`
 common_ancestor=`git merge-base ${base_branch} HEAD`
-git rev-list ${common_ancestor} --max-count=100 > refs.txt
+git rev-list ${common_ancestor} --max-count=100 > refs.txt 2> /dev/null
 
+echo "Repository ID: $repository_id"
 echo "Current commit ID: $commit_id"
 echo "Common ancestor: $common_ancestor"
+
+if [[ $commit_id == $repository_id ]]; then
+    echo "WARNING! Your repository ID and the current commit ID are identical."
+    echo "This is OK if you are on the first commit of your repository."
+    echo "But this is not OK if you are on a CI tool that checks out a single commit."
+    echo "Please consider adding a 'git fetch --prune --unshallow' "
+    echo "before invoking 'ccguard.sh'."
+fi
 
 set -eu
 

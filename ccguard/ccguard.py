@@ -161,10 +161,7 @@ class GitAdapter(object):
             yield commits
 
     def get_files(self):
-        command = "git rev-parse --show-toplevel"
-        root_folder = get_output(
-            command, working_folder=self.repository_folder
-        ).rstrip()
+        root_folder = self.get_root_path()
         command = "git ls-files"
         output = get_output(command, working_folder=root_folder)
         files = output.split("\n")
@@ -174,7 +171,10 @@ class GitAdapter(object):
 
     def get_common_ancestor(self, base_branch="origin/master", ref="HEAD"):
         command = "git merge-base {} {}".format(base_branch, ref)
-        return get_output(command, working_folder=self.repository_folder).rstrip()
+        try:
+            return get_output(command, working_folder=self.repository_folder).rstrip()
+        except subprocess.CalledProcessError:
+            return None
         # at the moment, CircleCI does not provide the name of the base|target branch
         # https://ideas.circleci.com/ideas/CCI-I-894
 
@@ -763,11 +763,25 @@ def main(args=None, log_function=print, logging_module=logging):
     args = parse_args(args)
 
     if args.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
+        logging_module.getLogger().setLevel(logging.DEBUG)
+    else:
+        logging_module.getLogger().setLevel(logging.INFO)
 
     git = GitAdapter(args.repository)
     repository_id = git.get_repository_id()
-    logging.info("Your repository ID is %s", repository_id)
+    logging_module.info("Your repository ID is %s", repository_id)
+    current_commit_id = git.get_current_commit_id()
+    if current_commit_id == repository_id:
+        logging_module.warning(
+            "Your repository ID and the current commit ID are identical."
+        )
+        logging_module.info(
+            "This is OK if you are on the first commit of your repository.\n"
+            "But this is not OK if you are on a CI tool that "
+            "checks out a single commit.\n"
+            "Please consider adding a `git fetch --prune --unshallow` "
+            "before invoking `ccguard`."
+        )
 
     source = git.get_root_path()
     tree = normalize_report_paths(args.report, source)
@@ -785,14 +799,18 @@ def main(args=None, log_function=print, logging_module=logging):
         )
 
         common_ancestor = git.get_common_ancestor(args.target_branch)
-        current_commit_id = git.get_current_commit_id()
 
-        if common_ancestor == current_commit_id and not args.uncommitted:
-            ref = "{}^".format(common_ancestor)
-        else:
-            ref = common_ancestor
+        commit_id = None
 
-        commit_id = determine_parent_commit(reference_commits, iter_callable(git, ref))
+        if common_ancestor:
+            if common_ancestor == current_commit_id and not args.uncommitted:
+                ref = "{}^".format(common_ancestor)
+            else:
+                ref = common_ancestor
+
+            commit_id = determine_parent_commit(
+                reference_commits, iter_callable(git, ref)
+            )
 
         if commit_id:
             logging_module.info("Retrieving data for reference commit %s.", commit_id)
