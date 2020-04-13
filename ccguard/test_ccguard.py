@@ -316,3 +316,34 @@ def test_main():
         assert [
             line for line in output if line == "No reference code coverage data found."
         ]
+
+
+def test_main_single_commit():
+    adapter_class = MagicMock()
+    adapter_factory = MagicMock(return_value=adapter_class)
+    with patch.object(ccguard, "adapter_factory", return_value=adapter_factory):
+        with patch.object(ccguard, "get_output") as get_output_mock:
+
+            def side_effect(command, working_folder):
+                if "git rev-list --max-parents=0" in command:
+                    return "aaaa"
+                if "git rev-parse HEAD" in command:
+                    return "aaaa"
+                return ""
+
+            get_output_mock.side_effect = side_effect
+
+            logging_module = MagicMock()
+            output = []
+            logging_module.warning = MagicMock(
+                side_effect=lambda *args: output.append(args[0] % args[1:])
+            )
+            sample_file = "ccguard/test_data/sample_coverage.xml"
+            test_file = os.path.splitext(sample_file)[0] + "-1.xml"
+            copyfile(sample_file, test_file)
+            ccguard.main([test_file], logging_module=logging_module)
+            assert [
+                line
+                for line in output
+                if "Your repository ID and the current commit ID are identical." in line
+            ]
