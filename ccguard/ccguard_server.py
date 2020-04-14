@@ -11,7 +11,7 @@ import threading
 import flask
 import lxml
 import requests
-from flask import abort, jsonify, request, render_template
+from flask import abort, jsonify, request, render_template, Response
 from pycobertura import Cobertura, CoberturaDiff
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 from colour import Color
@@ -350,9 +350,10 @@ def api_status_badge(repository_id):
         red, green = Color(red), Color(green)
         colors = list(red.range_to(green, 100))
 
-        return minimize_xml(
+        response = minimize_xml(
             BADGE_FORMAT.format(color=colors[rate], pct="{:d}%".format(rate))
         )
+        return Response(response, mimetype="image/svg+xml")
 
 
 @app.route(
