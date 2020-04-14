@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ccguard",
-    version="0.5.0",
+    version="0.5.1",
     entry_points={
         "console_scripts": [
             "ccguard=ccguard.ccguard:main",
@@ -25,9 +25,9 @@ setuptools.setup(
     url="https://github.com/nilleb/ccguard",
     packages=["ccguard"],
     package_data={
-        "": ["scripts/migrate_sqlite_database.py", "scripts/cleanup_database.py"],
+        "": ["scripts/migrate_sqlite_database.py", "scripts/cleanup_database.py", "templates/index.html"],
     },
-    install_requires=["pycobertura", "gitpython", "redis", "flask", "requests", "lxml"],
+    install_requires=["pycobertura", "gitpython", "redis", "flask", "requests", "lxml", "colour"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
