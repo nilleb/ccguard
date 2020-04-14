@@ -140,6 +140,7 @@ Add the following Markdown to your README.md
 
 ## alternatives to this software
 
+- [opencov](https://github.com/danhper/opencov)
 - [diff-cover](https://github.com/Bachmann1234/diff_cover)
 - [codecov.io](https://codecov.io/)
 - [coveralls.io](https://coveralls.io/)
