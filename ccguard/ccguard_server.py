@@ -328,7 +328,9 @@ def minimize_xml(xml):
     return lxml.etree.tostring(elem)
 
 
-@app.route("/api/v1/repositories/<string:repository_id>/status_badge.svg", methods=["GET"])
+@app.route(
+    "/api/v1/repositories/<string:repository_id>/status_badge.svg", methods=["GET"]
+)
 def api_status_badge(repository_id):
     branch = request.args.get("branch") or "master"
     red = request.args.get("red") or "red"
