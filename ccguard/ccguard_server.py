@@ -2,6 +2,7 @@ import argparse
 import datetime
 import hashlib
 import io
+import json
 import logging
 import socket
 import sqlite3
@@ -520,7 +521,10 @@ def send_telemetry_event(config: dict = None):
         x = threading.Thread(
             target=requests.post,
             args=("https://ccguard.nilleb.com/api/v1/telemetry",),
-            kwargs={"data": data},
+            kwargs={
+                "data": json.dumps(data),
+                "headers": {"content-type": "application/json"},
+            },
         )
         x.start()
 
