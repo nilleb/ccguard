@@ -9,6 +9,9 @@ PKG_VERSION=$(python setup.py --version)
 
 sed -i "" "s/\(__version__ = \"\).*\(\"\)/\1${PKG_VERSION}\2/g" ccguard/__init__.py
 
+git add ccguard/__init__.py
+git commit -m "chore: bump version"
+
 git tag -am "release v${PKG_VERSION}" v${PKG_VERSION}
 git push --tags
 python setup.py bdist_wheel
