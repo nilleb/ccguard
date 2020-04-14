@@ -1,0 +1,19 @@
+server {
+    listen 80;
+    server_name ${DOMAIN};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    client_max_body_size 100M;
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    location ~ /.well-known {
+        root ${HOME}/letsencrypt;
+    }
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:${HOME}/ccguard.sock;
+    }
+}
