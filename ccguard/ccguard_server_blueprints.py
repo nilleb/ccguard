@@ -9,7 +9,16 @@ from typing import Optional, Tuple
 
 import lxml
 from colour import Color
-from flask import Blueprint, abort, current_app, g, jsonify, render_template, request, Response
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    g,
+    jsonify,
+    render_template,
+    request,
+    Response,
+)
 from pycobertura import Cobertura, CoberturaDiff
 from pycobertura.reporters import HtmlReporter, HtmlReporterDelta
 
@@ -587,7 +596,6 @@ def api_status_badge(repository_id):
             BADGE_FORMAT.format(color=colors[rate], pct="{:d}%".format(rate))
         )
         return Response(response, mimetype="image/svg+xml")
-
 
 
 @api_v1.route(
