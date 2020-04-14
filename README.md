@@ -1,6 +1,6 @@
 # ccguard
 
-[![CircleCI](https://circleci.com/gh/nilleb/ccguard.svg?style=svg)](https://circleci.com/gh/nilleb/ccguard)[![PyPI version](https://badge.fury.io/py/ccguard.svg)](https://badge.fury.io/py/ccguard)[![CodeCoverage](https://ccguard.nilleb.com/api/v1/repositories/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/status_badge)](https://ccguard.nilleb.com/web/main/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8)
+[![CircleCI](https://circleci.com/gh/nilleb/ccguard.svg?style=svg)](https://circleci.com/gh/nilleb/ccguard)[![PyPI version](https://badge.fury.io/py/ccguard.svg)](https://badge.fury.io/py/ccguard)[![CodeCoverage](https://ccguard.nilleb.com/api/v1/repositories/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/status_badge.svg)](https://ccguard.nilleb.com/web/main/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8)
 
 you can only improve! :-)
 
