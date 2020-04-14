@@ -145,10 +145,28 @@ class SqliteServerAdapter(object):
 
 
 def record_telemetry_event(data: dict, remote_addr: str, config: dict = None):
-    ip_bytes = socket.inet_aton(remote_addr)
+    try:
+        ip_bytes = socket.inet_aton(remote_addr)
+    except OSError:
+        logging.exception("Unexpected exception on remote_addr: %s", remote_addr)
+        ip_bytes = b"0.0.0.0"
+
     data["ip"] = hashlib.sha224(ip_bytes).hexdigest()
     with SqliteServerAdapter(config) as adapter:
         adapter.record(data)
+
+
+def remote_address():
+    fwd_for = request.headers.get("X-Forwarded-For")
+    if fwd_for is not None:
+        parts = fwd_for.split(", ")
+        return parts[0]
+    real_ip = request.headers.get("X-Real-Ip")
+    if real_ip:
+        return real_ip
+    if request.remote_addr:
+        return request.remote_addr
+    return "0.0.0.0"
 
 
 @app.route("/api/v1/telemetry", methods=["POST"])
@@ -158,7 +176,7 @@ def api_telemetry_collect():
     if not data:
         return "OK, Thanks all the same!"
 
-    record_telemetry_event(data, remote_addr=request.remote_addr)
+    record_telemetry_event(data, remote_addr=remote_address())
     return "OK, Thanks!"
 
 
