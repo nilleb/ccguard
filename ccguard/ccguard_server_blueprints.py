@@ -571,9 +571,7 @@ def get_last_commit(adapter, branch=None):
     return commit_id
 
 
-@api_v1.route(
-    "/api/v1/repositories/<string:repository_id>/status_badge.svg", methods=["GET"]
-)
+@api_v1.route("/repositories/<string:repository_id>/status_badge.svg", methods=["GET"])
 def api_status_badge(repository_id):
     branch = request.args.get("branch") or "master"
     red = request.args.get("red") or "red"
