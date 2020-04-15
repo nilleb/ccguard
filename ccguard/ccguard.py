@@ -59,7 +59,6 @@ def configuration(repository_path="."):
                 config.update(json.load(config_fd))
         except FileNotFoundError:
             logging.debug("File %s has not been found", path)
-            pass
     return config
 
 
