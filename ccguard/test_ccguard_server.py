@@ -1,4 +1,5 @@
 import os
+import json
 from sqlite3 import IntegrityError
 from unittest.mock import MagicMock, call, patch
 
@@ -191,6 +192,47 @@ def test_debug_repositories_v2():
                 assert result.status_code == 200
                 assert result.data
                 assert adapter_class.list_repositories.called_with(config)
+
+
+def test_all_references():
+    repository_id = "abcd"
+    config = {}
+    commits = ["a", "b", "c", "d"]
+    adapter = MagicMock()
+    adapter.get_cc_commits = MagicMock(return_value=commits)
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
+    adapter_factory = MagicMock(return_value=adapter_class)
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
+        with patch.object(ccm, "configuration", return_value=config):
+            with csm.app.test_client() as test_client:
+                url = "/api/v1/references/{}/all".format(repository_id)
+                result = test_client.get(url)
+                assert result.status_code == 200
+                assert json.loads(result.data.decode("utf-8")) == commits
+                assert adapter_factory.called_with(None, config)
+                assert adapter.get_cc_commits.called
+
+
+def test_all_references_v2():
+    repository_id = "abcd"
+    config = {}
+    commits = ["a", "b", "c", "d"]
+    adapter = MagicMock()
+    adapter.get_cc_commits = MagicMock(return_value=commits)
+    adapter_class = MagicMock()
+    adapter_class.__enter__ = MagicMock(return_value=adapter)
+    adapter_factory = MagicMock(return_value=adapter_class)
+    with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
+        with patch.object(ccm, "configuration", return_value=config):
+            with csm.app.test_client() as test_client:
+                url = "/api/v2/references/{}/all".format(repository_id)
+                result = test_client.get(url)
+                assert result.status_code == 200
+                response = json.loads(result.data)
+                assert response["references"] == commits
+                assert adapter_factory.called_with(None, config)
+                assert adapter.get_cc_commits.called
 
 
 def test_choose_references():
