@@ -1,3 +1,4 @@
+import io
 import os
 from . import ccguard
 import redis
@@ -79,13 +80,21 @@ def test_parse_common():
 
 
 def test_configuration():
-    config = ccguard.configuration()
-    assert config
-    dbpath = config.get("sqlite.dbpath")
-    config = ccguard.configuration("ccguard/test_data/configuration_override")
-    assert config
-    dbpath_override = config.get("sqlite.dbpath")
-    assert dbpath != dbpath_override
+    import logging
+
+    conf_file = io.StringIO('{"test":true}')
+    with patch.object(ccguard, "open", create=True) as mock_open:
+
+        def call_open(x):
+            if str(x) == ccguard.CONFIG_FILE_NAME:
+                return conf_file
+            else:
+                raise FileNotFoundError
+
+        mock_open.side_effect = call_open
+        config = ccguard.configuration()
+        logging.error(config)
+        assert config["test"]
 
 
 def setup_redis_mock():
