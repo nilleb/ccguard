@@ -1,6 +1,10 @@
 # ccguard
 
-[![CircleCI](https://circleci.com/gh/nilleb/ccguard.svg?style=svg)](https://circleci.com/gh/nilleb/ccguard)[![PyPI version](https://badge.fury.io/py/ccguard.svg)](https://badge.fury.io/py/ccguard)[![CodeCoverage](https://ccguard.nilleb.com/api/v1/repositories/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/status_badge.svg)](https://ccguard.nilleb.com/web/main/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8)
+<div align="center">
+
+[![CircleCI](https://circleci.com/gh/nilleb/ccguard.svg?style=svg)](https://circleci.com/gh/nilleb/ccguard) [![PyPI version](https://badge.fury.io/py/ccguard.svg)](https://badge.fury.io/py/ccguard) [![CodeCoverage](https://ccguard.nilleb.com/api/v1/repositories/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/status_badge.svg)](https://ccguard.nilleb.com/web/main/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8)[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+
+</div>
 
 you can only improve! :-)
 
@@ -8,8 +12,8 @@ ccguard compares the current code coverage to past code coverage. ccguard fails 
 
 ![ccguard.py in action](https://github.com/nilleb/ccguard/blob/master/static/success.png?raw=true "ccguard.py in action")
 ![so bad, a regression](https://github.com/nilleb/ccguard/blob/master/static/failure.png?raw=true "so bad, a regression")
-![trends](https://github.com/nilleb/ccguard/blob/master/static/log.png "cc is increasing!")
-![all the status badges](https://github.com/nilleb/ccguard/blob/master/static/all_badges.png "expose your code coverage pride ;-)")
+
+<img src="https://github.com/nilleb/ccguard/raw/master/static/log.png" alt="trends" title="cc is increasing!" style="max-width: 60%;"><img src="https://github.com/nilleb/ccguard/raw/master/static/all_badges.png" alt="all the status badges" title="expose your code coverage pride ;-)" style="max-width: 40%;/* top: 0; */vertical-align: top;">
 
 ## requires
 
