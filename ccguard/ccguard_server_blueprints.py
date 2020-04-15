@@ -581,7 +581,7 @@ def api_status_badge(repository_id):
     with adapter_class(repository_id, config) as adapter:
         commit_id = get_last_commit(adapter, branch)
         if not commit_id:
-            return minimize_xml(BADGE_UNKNOWN)
+            return Response(minimize_xml(BADGE_UNKNOWN), mimetype="image/svg+xml")
 
         rate, *_ = adapter.get_commit_info(commit_id)
         rate = int(rate) if rate > 1 else int(rate * 100)
