@@ -132,6 +132,28 @@ ccguard_server
 
 You could be interested to know how to [setup the server](https://github.com/nilleb/ccguard/blob/master/docs/server-setup/server-setup-ubuntu.sh).
 
+## convert a report
+
+Sometimes you need to convert a report from a format to another. ccguard_convert is here to help!
+
+```sh
+# convert the report from golang textual format to cobertura.xml
+ccguard_convert golang-coverage-report.txt -if go -of xml -o output.xml
+
+# convert the report from cobertura xml format to html (pycobertura)
+ccguard_convert cobertura.xml -if xml -of html -o output.html
+
+# convert the report from golang textual format to html (pycobertura)
+ccguard_convert golang-coverage-report.txt -if go -of html -o output.html
+
+# you can add a .ccguard.config.json in the same directory of the report or to your home directory to fine tune the exclusions
+echo '{"convert.exclusions.go": ["**/config/default.go"]}' > .ccguard.config.json
+# the report will not contain the files matching the glob expression
+ccguard_convert golang-coverage-report.txt -if go -of xml -o output.xml
+```
+
+To know more about glob expressions, see `man 3 fnmatch`.
+
 ## expose a status badge
 
 Add the following Markdown to your README.md
