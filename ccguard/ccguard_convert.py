@@ -8,9 +8,12 @@ from lxml import objectify
 import ccguard
 from pycobertura import Cobertura
 from pycobertura.reporters import HtmlReporter
+from fnmatch import fnmatch
 
 
-def convert_golang_report(report, log_function=print):
+def convert_golang_report(report, log_function=print, config=None):
+    config = config if config else ccguard.configuration(os.path.dirname(report))
+    exclusions = config.get("convert.exclusions.go", [])
     # name.go:line.column,line.column numberOfStatements count
 
     pattern = (
@@ -29,6 +32,15 @@ def convert_golang_report(report, log_function=print):
                 continue
 
             filename = match.group("filename")
+            exclude = False
+            for exclusion in exclusions:
+                if fnmatch(filename, exclusion):
+                    exclude |= True
+                    break
+
+            if exclude:
+                continue
+
             line_begins = int(match.group("line_begins"))
             # column_begins = match.group("column_begins")
             line_ends = int(match.group("line_ends"))
