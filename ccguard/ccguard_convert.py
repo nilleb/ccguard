@@ -166,7 +166,7 @@ def parse_args(args=None):
         "-if",
         "--input-format",
         dest="input_format",
-        help="The format of the input report. (Supported: go)",
+        help="The format of the input report. (Supported: go, xml)",
     )
 
     parser.add_argument(
