@@ -159,7 +159,7 @@ To know more about glob expressions, see `man 3 fnmatch`.
 Add the following Markdown to your README.md
 
 ```md
-[![CodeCoverage](https://ccguard.nilleb.com/api/v1/repositories/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/status_badge.svg)](https://ccguard.nilleb.com/web/main/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8)
+[![CodeCoverage](https://ccguard.nilleb.com/api/v1/repositories/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8/status_badge.svg?branch=master)](https://ccguard.nilleb.com/web/main/a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8)
 ```
 
 (make sure that you change your repository_id to match the one printed by a `ccguard --debug`)
