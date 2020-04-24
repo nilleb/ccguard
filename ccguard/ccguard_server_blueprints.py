@@ -631,12 +631,13 @@ def api_reference_download_data_debug(repository_id, commit_id):
 )
 @authenticated
 def api_upload_reference(repository_id, commit_id):
+    branch = request.args.get("branch")
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
         data = request.get_data()
         try:
-            adapter.persist(commit_id, data)
+            adapter.persist(commit_id, data, branch=branch)
         except Exception:
             logging.exception("Unexpected exception on persist.")
             abort(400, "Invalid request.")
