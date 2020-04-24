@@ -667,27 +667,49 @@ def api_compare(repository_id, commit_id1, commit_id2):
 
 @web.route("/report/<string:repository_id>/<string:commit_id>", methods=["GET"])
 def web_generate_report(repository_id, commit_id):
-    config = ccguard.configuration()
-    adapter_class = ccguard.adapter_factory(None, config)
-    with adapter_class(repository_id, config) as adapter:
-        reference = retrieve(adapter, commit_id)
-        if not reference:
-            abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
-        report = HtmlReporter(reference)
-        return report.generate()
+    return report(repository_id, commit_id=commit_id)
 
 
 @web.route("/main/<string:repository_id>", methods=["GET"])
 def web_main(repository_id):
     branch = request.args.get("branch") or "master"
+    return report(repository_id, branch=branch)
+
+
+SOURCES_MESSAGE = """
+Since <a href="https://github.com/nilleb/ccguard/blob/master/docs/FAQ.md#what-does-ccguard-collect-and-where">
+code is not available on the server</a>,
+we are not displaying it inline. In order to obtain a report including sources,
+please type, in the folder containing your source code:
+<pre id="commandline">
+ccguard_server_address="" ccguard_show --adapter web {commit_id}
+</pre>
+<script>
+var serverAddress = window.location.protocol + "//" + window.location.hostname
+if (window.location.port != "") 
+   serverAddress += ":" + window.location.port 
+
+var preElement = document.getElementById("commandline");
+preElement.innerHTML = "ccguard_server_address=" + serverAddress + " ccguard_show --adapter web {commit_id}"
+</script>
+"""
+
+
+def report(repository_id, commit_id=None, branch=None):
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
-        commit_id = get_last_commit(adapter, branch)
+        commit_id = commit_id or get_last_commit(adapter, branch)
         reference = retrieve(adapter, commit_id)
         if not reference:
             abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
-        report = HtmlReporter(reference)
+        sources_message = SOURCES_MESSAGE.format(commit_id=commit_id)
+        report = HtmlReporter(
+            reference,
+            title="Coverage report for commit {commit_id}".format(commit_id),
+            render_file_sources=False,
+            no_file_sources_message=sources_message.format(commit_id),
+        )
         return report.generate()
 
 
