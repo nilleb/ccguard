@@ -24,7 +24,7 @@ ccguard_token=azoudcodbqzypfuazêofvpzkecnaio
       - name: Upload coverage
         run: |
           git fetch --prune --unshallow
-          ccguard --debug --html coverage.xml --adapter web --target-branch origin/${{ github.base_ref }}
+          ccguard --debug --html coverage.xml --adapter web --target-branch origin/${{ github.base_ref }} --branch {{ github.ref }}
 
         env:
           ccguard_server_address: ${{ secrets.ccguard_server_address }}

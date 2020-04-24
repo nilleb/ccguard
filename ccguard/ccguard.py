@@ -181,6 +181,10 @@ class GitAdapter(object):
         command = "git rev-parse --show-toplevel"
         return get_output(command, working_folder=self.repository_folder).rstrip()
 
+    def get_current_branch(self):
+        command = "git rev-parse --abbrev-ref HEAD"
+        return get_output(command, working_folder=self.repository_folder)
+
 
 class ReferenceAdapter(object):
     def __init__(self, repository_id, config):
@@ -199,7 +203,7 @@ class ReferenceAdapter(object):
     def retrieve_cc_data(self, commit_id: str) -> Optional[bytes]:
         raise NotImplementedError
 
-    def persist(self, commit_id: str, data: bytes):
+    def persist(self, commit_id: str, data: bytes, branch: str = None):
         raise NotImplementedError
 
     def dump(self) -> list:
@@ -221,13 +225,19 @@ class SqliteAdapter(ReferenceAdapter):
         self.conn.close()
 
     def get_cc_commits(self, count: int = -1, branch=None) -> frozenset:
+        where_clause = 'WHERE branch="{}"'.format(branch) if branch else ""
         limit_clause = "LIMIT {}".format(count) if count > 0 else ""
         commits_query = (
             "SELECT commit_id "
             "FROM timestamped_coverage_{repository_id} "
+            "{where_clause} "
             "ORDER BY collected_at DESC "
             "{limit_clause}"
-        ).format(limit_clause=limit_clause, repository_id=self.repository_id)
+        ).format(
+            where_clause=where_clause,
+            limit_clause=limit_clause,
+            repository_id=self.repository_id,
+        )
         return frozenset(
             c for ct in self.conn.execute(commits_query).fetchall() for c in ct
         )
@@ -291,16 +301,16 @@ class SqliteAdapter(ReferenceAdapter):
         except ET.XMLSyntaxError:
             return 0.0, 0, 0
 
-    def persist(self, commit_id: str, data: bytes):
+    def persist(self, commit_id: str, data: bytes, branch: str = None):
         if not data or not isinstance(data, bytes):
             raise ValueError("Unwilling to persist invalid data.")
 
         query = (
             "INSERT INTO timestamped_coverage_{repository_id} "
-            "(commit_id, coverage_data, line_rate, lines_covered, lines_valid) "
-            "VALUES (?, ?, ?, ?, ?) "
+            "(commit_id, coverage_data, branch, line_rate, lines_covered, lines_valid) "
+            "VALUES (?, ?, ?, ?, ?, ?) "
         ).format(repository_id=self.repository_id)
-        data_tuple = (commit_id, data, *self._get_line_coverage(data))
+        data_tuple = (commit_id, data, branch, *self._get_line_coverage(data))
         try:
             self.conn.execute(query, data_tuple)
             self.conn.commit()
@@ -319,6 +329,7 @@ class SqliteAdapter(ReferenceAdapter):
         ddl = (
             "CREATE TABLE IF NOT EXISTS `timestamped_coverage_{repository_id}` ("
             "`commit_id` varchar(40) NOT NULL, "
+            "`branch` varchar(70), "
             "`collected_at` ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
             "`count` INT DEFAULT 1, "
             "`line_rate` REAL DEFAULT 0.0, "
@@ -375,7 +386,7 @@ class WebAdapter(ReferenceAdapter):
         )
         return r.content
 
-    def persist(self, commit_id: str, data: bytes):
+    def persist(self, commit_id: str, data: bytes, branch=None):
         if not data or not isinstance(data, bytes):
             raise ValueError("Unwilling to persist invalid data.")
 
@@ -383,9 +394,11 @@ class WebAdapter(ReferenceAdapter):
         if self.token:
             headers["Authorization"] = self.token
 
+        optional_args = "?branch={}".format(branch) if branch else ""
         requests.put(
-            "{p.server}/api/v1/references/{p.repository_id}/{commit_id}/data".format(
-                p=self, commit_id=commit_id
+            "{p.server}/api/v1/references/"
+            "{p.repository_id}/{commit_id}/data{optional_args}".format(
+                p=self, commit_id=commit_id, optional_args=optional_args,
             ),
             headers=headers,
             data=data,
@@ -432,7 +445,7 @@ class RedisAdapter(ReferenceAdapter):
     def retrieve_cc_data(self, commit_id: str) -> Optional[bytes]:
         return self.redis.hget(self.repository_id, commit_id)
 
-    def persist(self, commit_id: str, data: bytes):
+    def persist(self, commit_id: str, data: bytes, branch: str = None):
         if not data or not isinstance(data, bytes):
             raise ValueError("Unwilling to persist invalid data.")
 
@@ -456,12 +469,16 @@ def determine_parent_commit(
 
 
 def persist(
-    repo_adapter: GitAdapter, reference_adapter: ReferenceAdapter, report_file: str
+    repo_adapter: GitAdapter,
+    reference_adapter: ReferenceAdapter,
+    report_file: str,
+    branch: str = None,
 ):
     with open(report_file, "rb") as fd:
         data = fd.read()
         current_commit = repo_adapter.get_current_commit_id()
-        reference_adapter.persist(current_commit, data)
+        branch = branch if branch else repo_adapter.get_current_branch()
+        reference_adapter.persist(current_commit, data, branch)
         logging.info("Data for commit %s persisted successfully.", current_commit)
 
 
@@ -507,6 +524,11 @@ def parse_args(args=None, parser=None):
         dest="target_branch",
         help="the branch to which this code will be merged (default: master)",
         default="origin/master",
+    )
+    parser.add_argument(
+        "--branch",
+        dest="branch",
+        help="the name of the branch to which this code belongs to",
     )
     parser.add_argument(
         "--html",
@@ -832,7 +854,7 @@ def main(args=None, log_function=print, logging_module=logging):
             print_cc_report(challenger, report_file="cc.html" if args.html else None)
 
             if not args.uncommitted:
-                persist(git, adapter, args.report)
+                persist(git, adapter, args.report, args.branch)
         else:
             logging_module.error("No recent code coverage data found.")
 
