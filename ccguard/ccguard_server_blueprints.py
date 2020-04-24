@@ -692,7 +692,7 @@ if (window.location.port != "")
 var preElement = document.getElementById("commandline");
 preElement.innerHTML = "ccguard_server_address=" + serverAddress + " ccguard_show --adapter web {commit_id}"
 </script>
-"""
+"""  # noqa
 
 
 def report(repository_id, commit_id=None, branch=None):
@@ -703,12 +703,12 @@ def report(repository_id, commit_id=None, branch=None):
         reference = retrieve(adapter, commit_id)
         if not reference:
             abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
-        sources_message = SOURCES_MESSAGE.format(commit_id=commit_id)
+        # sources_message = SOURCES_MESSAGE.format(commit_id=commit_id)
         report = HtmlReporter(
             reference,
-            title="Coverage report for commit {commit_id}".format(commit_id),
-            render_file_sources=False,
-            no_file_sources_message=sources_message.format(commit_id),
+            # title="Coverage report for commit {commit_id}".format(commit_id=commit_id),
+            # render_file_sources=False,
+            # no_file_sources_message=sources_message.format(commit_id),
         )
         return report.generate()
 
