@@ -45,9 +45,10 @@ def test_get_files():
 
 
 def test_persist():
-    commit_id = "test"
+    commit_id, branch = "test", "blablabla"
     repo = MagicMock()
     repo.get_current_commit_id = MagicMock(return_value=commit_id)
+    repo.get_current_branch = MagicMock(return_value=branch)
 
     reference = MagicMock()
     reference.persist = MagicMock()
@@ -59,7 +60,7 @@ def test_persist():
     ccguard.persist(repo, reference, path)
 
     repo.get_current_commit_id.assert_called()
-    reference.persist.assert_called_with(commit_id, data)
+    reference.persist.assert_called_with(commit_id, data, branch)
 
 
 def test_parse():

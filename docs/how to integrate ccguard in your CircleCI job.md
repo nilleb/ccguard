@@ -48,7 +48,7 @@ Disclaimer: requires python. You could instead use the "_I don't want install py
             GO111MODULE=on go test -coverprofile coverage.txt -covermode=count -coverpkg=github.com/nilleb/fsevents/... ./...
             source /tmp/workspace/env/bin/activate
             ccguard_convert coverage.txt -if go -of xml -o coverage.xml
-            ccguard --adapter web coverage.xml --target-branch ${GITHUB_PR_BASE_BRANCH:-origin/master}
+            ccguard --adapter web coverage.xml --target-branch ${GITHUB_PR_BASE_BRANCH:-origin/master} --branch ${CIRCLE_BRANCH}
 
       - store_artifacts:
           path: cc.html

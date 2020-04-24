@@ -16,11 +16,13 @@ def _get_line_coverage(data: bytes) -> (float, int, int):
 
 
 def _alter_table(conn, new_columns, table, sql):
-    for name, ctype, default in new_columns:
+    for name, ctype, default, not_null in new_columns:
         if name not in sql:
-            print("Adding {} {} DEFAULT {}".format(name, ctype, default))
-            ddl = "ALTER TABLE {} ADD COLUMN `{}` {} DEFAULT {}".format(
-                table, name, ctype, default
+            default_clause = "DEFAULT {}" if default else ""
+            not_null_clause = "NOT NULL" if not_null else ""
+            print("Adding {} {} {} {}".format(name, ctype, default_clause, not_null_clause))
+            ddl = "ALTER TABLE {} ADD COLUMN `{}` {} {} {}".format(
+                table, name, ctype, default_clause, not_null_clause,
             )
             conn.execute(ddl)
 
@@ -58,11 +60,12 @@ def migration_steps_03_04(conn):
     tables = conn.execute(all_repositories).fetchall()
 
     new_columns = [
-        ("count", "INT", "1"),
-        ("line_rate", "REAL", "0.0"),
-        ("lts", "INTEGER", "0"),
-        ("lines_covered", "INTEGER", "0"),
-        ("lines_valid", "INTEGER", "0"),
+        ("count", "INT", "1", False),
+        ("line_rate", "REAL", "0.0", False),
+        ("lts", "INTEGER", "0", False),
+        ("lines_covered", "INTEGER", "0", False),
+        ("lines_valid", "INTEGER", "0", False),
+        ("branch", "VARCHAR(70)", "", False),
     ]
 
     for table, sql in tables:
