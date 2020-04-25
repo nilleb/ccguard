@@ -508,7 +508,7 @@ def api_references_debug(repository_id):
     return jsonify({"repository_id": repository_id, "data": output})
 
 
-BADGE_FORMAT = """<svg xmlns="http://www.w3.org/2000/svg" width="112" height="20">
+BADGE_FORMAT = """<svg xmlns="http://www.w3.org/2000/svg" width="96" height="20">
     <linearGradient id="b" x2="0" y2="100%">
         <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
         <stop offset="1" stop-opacity=".1"/>
@@ -531,7 +531,7 @@ BADGE_FORMAT = """<svg xmlns="http://www.w3.org/2000/svg" width="112" height="20
 </svg>
 """
 
-BADGE_UNKNOWN = """<svg xmlns="http://www.w3.org/2000/svg" width="137" height="20">
+BADGE_UNKNOWN = """<svg xmlns="http://www.w3.org/2000/svg" width="121" height="20">
     <linearGradient id="b" x2="0" y2="100%">
         <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
         <stop offset="1" stop-opacity=".1"/>
@@ -573,6 +573,7 @@ def get_last_commit(adapter, branch=None):
 
 @api_v1.route("/repositories/<string:repository_id>/status_badge.svg", methods=["GET"])
 def api_status_badge(repository_id):
+    logging.warning(request.headers.get("Referer", None))
     branch = request.args.get("branch") or "master"
     red = request.args.get("red") or "red"
     green = request.args.get("green") or "green"
