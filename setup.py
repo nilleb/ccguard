@@ -27,7 +27,7 @@ setuptools.setup(
     package_data={
         "": ["scripts/migrate_sqlite_database.py", "scripts/cleanup_database.py", "templates/index.html"],
     },
-    install_requires=["pycobertura", "gitpython", "redis", "flask", "requests", "lxml", "colour"],
+    install_requires=["pycobertura", "gitpython", "flask", "requests", "lxml", "colour"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
