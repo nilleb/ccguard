@@ -14,6 +14,13 @@ def test_get_repository_id():
     )
 
 
+def test_get_repository_id_desambiguate():
+    assert (
+        ccguard.GitAdapter(repository_desambiguate="ccguard").get_repository_id()
+        == "a8858db8a0d483f8f6c8e74a5dc03b84bc9674f8_ccguard"
+    )
+
+
 def test_get_current_commit_id():
     val = ccguard.GitAdapter().get_current_commit_id()
     assert isinstance(val, str)
@@ -77,6 +84,17 @@ def test_parse_common():
     args = parser.parse_args(["--repository", "test", "--debug", "--adapter", "mine"])
     assert args.debug
     assert args.repository == "test"
+    assert args.adapter == "mine"
+
+
+def test_parse_common_repo_modifier():
+    parser = ccguard.parse_common_args()
+    args = parser.parse_args(
+        ["--repository", "test", "--debug", "--adapter", "mine", "-d", "mod"]
+    )
+    assert args.debug
+    assert args.repository == "test"
+    assert args.repository_id_modifier == "mod"
     assert args.adapter == "mine"
 
 

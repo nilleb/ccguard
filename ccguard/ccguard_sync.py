@@ -6,13 +6,16 @@ import ccguard
 def transfer(
     commit_id,
     repo_folder=".",
+    repository_id_modifier=None,
     source_adapter_class=ccguard.SqliteAdapter,
     dest_adapter_class=ccguard.RedisAdapter,
     log_function=logging.debug,
 ):
     inner_callable = prepare_inner_callable(commit_id)
     config = ccguard.configuration(repo_folder)
-    repo_id = ccguard.GitAdapter(repo_folder).get_repository_id()
+    repo_id = ccguard.GitAdapter(
+        repo_folder, repository_id_modifier
+    ).get_repository_id()
     with source_adapter_class(repo_id, config) as source_adapter:
         with dest_adapter_class(repo_id, config) as dest_adapter:
             inner_callable(source_adapter, dest_adapter, log_function=log_function)
@@ -61,6 +64,12 @@ def parse_args(args=None):
         "--repository", dest="repository", help="the repository to analyze", default="."
     )
     parser.add_argument(
+        "-d",
+        "--repository-desambiguate",
+        dest="repository_id_modifier",
+        help="A token to distinguish repositories with the same first commit ID.",
+    )
+    parser.add_argument(
         "--debug",
         dest="debug",
         help="whether to print debug messages",
@@ -86,6 +95,7 @@ def main(args=None, log_function=logging.debug):
     transfer(
         args.commit_id,
         repo_folder=args.repository,
+        repository_id_modifier=args.repository_id_modifier,
         source_adapter_class=source_class,
         dest_adapter_class=dest_class,
         log_function=log_function,

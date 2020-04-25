@@ -128,13 +128,19 @@ class VersionedCobertura(Cobertura):
 
 
 class GitAdapter(object):
-    def __init__(self, repository_folder="."):
+    def __init__(self, repository_folder=".", repository_desambiguate=None):
         self.repository_folder = repository_folder
+        self.repository_desambiguate = repository_desambiguate
 
     def get_repository_id(self):
-        return get_output(
+        repository_id = get_output(
             "git rev-list --max-parents=0 HEAD", working_folder=self.repository_folder
         ).rstrip()
+
+        if self.repository_desambiguate:
+            repository_id = "{}_{}".format(repository_id, self.repository_desambiguate)
+
+        return repository_id
 
     def get_current_commit_id(self):
         return get_output(
@@ -504,6 +510,12 @@ def parse_common_args(parser=None):
     parser.add_argument(
         "--repository", dest="repository", help="the repository to analyze", default="."
     )
+    parser.add_argument(
+        "-d",
+        "--repository-desambiguate",
+        dest="repository_id_modifier",
+        help="A token to distinguish repositories with the same first commit ID.",
+    )
 
     return parser
 
@@ -788,7 +800,7 @@ def main(args=None, log_function=print, logging_module=logging):
     else:
         logging_module.getLogger().setLevel(logging.INFO)
 
-    git = GitAdapter(args.repository)
+    git = GitAdapter(args.repository, args.repository_id_modifier)
     repository_id = git.get_repository_id()
     logging_module.info("Your repository ID is %s", repository_id)
     current_commit_id = git.get_current_commit_id()
