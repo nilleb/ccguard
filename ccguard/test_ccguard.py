@@ -1,7 +1,6 @@
 import io
 import os
 from . import ccguard
-import redis
 from unittest.mock import MagicMock, patch
 from pycobertura import Cobertura, CoberturaDiff
 from shutil import copyfile
@@ -116,33 +115,6 @@ def test_configuration():
         assert config["test"]
 
 
-def setup_redis_mock():
-    data = {}
-
-    def set_data(a, b, c):
-        v = data.get(a, {})
-        v[b] = c
-        data[a] = v
-        print(data)
-
-    def hkeys(a):
-        return data.get(a, {}).keys()
-
-    def get_data(a, b):
-        return data.get(a, {}).get(b)
-
-    def dump(a):
-        return data.get(a, {}).items()
-
-    redis_client = MagicMock()
-    redis_client.hkeys = MagicMock(side_effect=hkeys)
-    redis_client.hset = MagicMock(side_effect=set_data)
-    redis_client.hget = MagicMock(side_effect=get_data)
-    redis_client.hgetall = MagicMock(side_effect=dump)
-
-    return redis_client
-
-
 def adapter_scenario(adapter: ccguard.ReferenceAdapter):
     commits = adapter.get_cc_commits()
     adapter.persist("one", b"<coverage>1</coverage>")
@@ -194,14 +166,6 @@ def test_sqladapter():
         os.unlink(abspath)
 
 
-def test_redis_adapter():
-    redis.Redis = MagicMock(return_value=setup_redis_mock())
-
-    config = ccguard.configuration()
-    with ccguard.RedisAdapter("test", config) as adapter:
-        adapter_scenario(adapter)
-
-
 def test_adapter_factory():
     config = dict(ccguard.DEFAULT_CONFIGURATION)
     adapter_class = ccguard.adapter_factory(None, config)
@@ -214,14 +178,13 @@ def test_adapter_factory():
         adapter_class = ccguard.adapter_factory(None, config)
         assert adapter_class is clazz
 
-    scenario("redis", ccguard.RedisAdapter)
     scenario("web", ccguard.WebAdapter)
 
     adapter_class = ccguard.adapter_factory("sqlite", config)
     assert adapter_class is ccguard.SqliteAdapter
     config["adapter.class"] = "sqlite"
-    adapter_class = ccguard.adapter_factory("redis", config)
-    assert adapter_class is ccguard.RedisAdapter
+    adapter_class = ccguard.adapter_factory("web", config)
+    assert adapter_class is ccguard.WebAdapter
 
 
 def test_print_cc_report():
