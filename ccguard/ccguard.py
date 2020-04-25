@@ -8,10 +8,8 @@ import sys
 import shlex
 import subprocess
 import sqlite3
-import redis
 import lxml.etree as ET
 from pathlib import Path
-from datetime import datetime
 import os
 import requests
 from typing import Optional, Callable, Iterable, Tuple, List
@@ -27,17 +25,12 @@ CONFIG_FILE_NAME = ".ccguard.config.json"
 
 KNOWN_ADAPTERS = {
     "web": "WebAdapter",
-    "redis": "RedisAdapter",
     "sqlite": "SqliteAdapter",
     "default": "SqliteAdapter",
 }
 
 
 DEFAULT_CONFIGURATION = {
-    "redis.host": "localhost",
-    "redis.port": 6379,
-    "redis.db": 0,
-    "redis.password": None,
     "ccguard.server.address": "http://127.0.0.1:5000",
     "threshold.tolerance": 0,
     "threshold.hard-minimum": -1,
@@ -426,44 +419,6 @@ class WebAdapter(ReferenceAdapter):
         return []
 
 
-class RedisAdapter(ReferenceAdapter):
-    def __init__(self, repository_id: str, config={}):
-        self.repository_id = repository_id
-        self.redis = self._build_redis(config)
-
-    @staticmethod
-    def _build_redis(config: dict):
-        host = config.get("redis.host")
-        port = config.get("redis.port")
-        db = config.get("redis.db")
-        password = config.get("redis.password")
-        return redis.Redis(host=host, port=port, db=db, password=password)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.redis.close()
-
-    def get_cc_commits(self) -> frozenset:
-        return frozenset(self.redis.hkeys(self.repository_id))
-
-    def retrieve_cc_data(self, commit_id: str) -> Optional[bytes]:
-        return self.redis.hget(self.repository_id, commit_id)
-
-    def persist(self, commit_id: str, data: bytes, branch: str = None):
-        if not data or not isinstance(data, bytes):
-            raise ValueError("Unwilling to persist invalid data.")
-
-        self.redis.hset(self.repository_id, commit_id, data)
-        self.redis.hset(
-            "{}:time".format(self.repository_id), commit_id, str(datetime.now())
-        )
-
-    def dump(self) -> list:
-        return self.redis.hgetall(self.repository_id)
-
-
 def determine_parent_commit(
     db_commits: frozenset, iter_callable: Callable
 ) -> Optional[str]:
@@ -498,7 +453,7 @@ def parse_common_args(parser=None):
 
     parser.add_argument(
         "--adapter",
-        help="Choose the adapter to use (choices: sqlite or redis)",
+        help="Choose the adapter to use (choices: sqlite or web)",
         dest="adapter",
     )
     parser.add_argument(

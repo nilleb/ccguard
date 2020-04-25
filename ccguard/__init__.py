@@ -1,6 +1,6 @@
 from .ccguard import (  # noqa
     SqliteAdapter,
-    RedisAdapter,
+    WebAdapter,
     ReferenceAdapter,
     configuration,
     GitAdapter,

@@ -7,8 +7,8 @@ def transfer(
     commit_id,
     repo_folder=".",
     repository_id_modifier=None,
-    source_adapter_class=ccguard.SqliteAdapter,
-    dest_adapter_class=ccguard.RedisAdapter,
+    source_adapter_class=ccguard.WebAdapter,
+    dest_adapter_class=ccguard.SqliteAdapter,
     log_function=logging.debug,
 ):
     inner_callable = prepare_inner_callable(commit_id)
@@ -55,10 +55,14 @@ def parse_args(args=None):
     )
 
     parser.add_argument(
-        "source_adapter", help="Choose the adapter to use (choices: sqlite or redis)",
+        "source_adapter",
+        help="Choose the adapter to use (choices: sqlite or web)",
+        default="web",
     )
     parser.add_argument(
-        "dest_adapter", help="Choose the adapter to use (choices: sqlite or redis)",
+        "dest_adapter",
+        help="Choose the adapter to use (choices: sqlite or web)",
+        default="sqlite",
     )
     parser.add_argument(
         "--repository", dest="repository", help="the repository to analyze", default="."
