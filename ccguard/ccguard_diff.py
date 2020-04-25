@@ -7,14 +7,20 @@ import ccguard
 
 
 def print_diff_report(
-    first_ref, second_ref, adapter, repository=".", pattern=None, log_function=print
+    first_ref,
+    second_ref,
+    adapter,
+    repository=".",
+    repository_id_modifier=None,
+    pattern=None,
+    log_function=print,
 ):
     dest = (pattern or "diff-{}-{}.html").format(first_ref, second_ref)
     fdata = adapter.retrieve_cc_data(first_ref)
     sdata = adapter.retrieve_cc_data(second_ref)
     first_fd = io.BytesIO(fdata)
     second_fd = io.BytesIO(sdata)
-    source = ccguard.GitAdapter(repository).get_root_path()
+    source = ccguard.GitAdapter(repository, repository_id_modifier).get_root_path()
     log_function(
         "Printing the diff report for the commits {} and {} to {}".format(
             first_ref, second_ref, dest
@@ -65,7 +71,9 @@ def main(args=None, log_function=print):
         return -1
 
     config = ccguard.configuration(args.repository)
-    repo_id = ccguard.GitAdapter(args.repository).get_repository_id()
+    repo_id = ccguard.GitAdapter(
+        args.repository, args.repository_id_modifier
+    ).get_repository_id()
 
     command = "git rev-parse {}".format(first)
     first = ccguard.get_output(command, args.repository).rstrip("\n")
@@ -91,6 +99,7 @@ def main(args=None, log_function=print):
                 second_ref,
                 adapter=adapter,
                 repository=args.repository,
+                repository_id_modifier=args.repository_id_modifier,
                 pattern=args.report_file,
                 log_function=log_function,
             )

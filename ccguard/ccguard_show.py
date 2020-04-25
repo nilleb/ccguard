@@ -14,7 +14,14 @@ def normalize_report_paths(reference_fd, source):
     return reference_fd
 
 
-def print_report(commit_id, adapter, repository=".", pattern=None, log_function=print):
+def print_report(
+    commit_id,
+    adapter,
+    repository=".",
+    repository_id_modifier=None,
+    pattern=None,
+    log_function=print,
+):
     dest = (pattern or "cc-{}.html").format(commit_id)
     log_function(
         "Printing the coverage report for the commit {} to {}".format(commit_id, dest)
@@ -22,7 +29,7 @@ def print_report(commit_id, adapter, repository=".", pattern=None, log_function=
 
     data = adapter.retrieve_cc_data(commit_id)
     reference_fd = io.BytesIO(data)
-    source = ccguard.GitAdapter(repository).get_root_path()
+    source = ccguard.GitAdapter(repository, repository_id_modifier).get_root_path()
     reference_fd = normalize_report_paths(reference_fd, source)
     fdata = ccguard.VersionedCobertura(reference_fd, source=source, commit_id=commit_id)
 
@@ -62,7 +69,9 @@ def main(args=None, log_function=print):
     adapter_class = ccguard.adapter_factory(args.adapter, config)
 
     config = ccguard.configuration(args.repository)
-    repo_id = ccguard.GitAdapter(args.repository).get_repository_id()
+    repo_id = ccguard.GitAdapter(
+        args.repository, args.repository_id_modifier
+    ).get_repository_id()
 
     command = "git rev-parse {}".format(args.commit_id)
     args.commit_id = ccguard.get_output(command, args.repository).rstrip("\n")
@@ -81,6 +90,7 @@ def main(args=None, log_function=print):
                 first_ref,
                 adapter=adapter,
                 repository=args.repository,
+                repository_id_modifier=args.repository_id_modifier,
                 pattern=args.report_file,
                 log_function=log_function,
             )

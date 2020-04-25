@@ -200,7 +200,9 @@ def main(args=None):
         else:
             write(args.output, ET.tostring(xml, pretty_print=True))
     elif args.output_format == "html":
-        source = ccguard.GitAdapter(os.path.dirname(args.report) or ".").get_root_path()
+        source = ccguard.GitAdapter(
+            os.path.dirname(args.report) or ".", args.repository_id_modifier
+        ).get_root_path()
         challenger = Cobertura(args.report, source=source)
         report = HtmlReporter(challenger)
         if not args.output:
