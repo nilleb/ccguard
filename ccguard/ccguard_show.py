@@ -19,6 +19,7 @@ def print_report(
     adapter,
     repository=".",
     repository_id_modifier=None,
+    subtype=None,
     pattern=None,
     log_function=print,
 ):
@@ -27,7 +28,7 @@ def print_report(
         "Printing the coverage report for the commit {} to {}".format(commit_id, dest)
     )
 
-    data = adapter.retrieve_cc_data(commit_id)
+    data = adapter.retrieve_cc_data(commit_id, subtype=subtype)
     reference_fd = io.BytesIO(data)
     source = ccguard.GitAdapter(repository, repository_id_modifier).get_root_path()
     reference_fd = normalize_report_paths(reference_fd, source)
@@ -77,7 +78,7 @@ def main(args=None, log_function=print):
     args.commit_id = ccguard.get_output(command, args.repository).rstrip("\n")
 
     with adapter_class(repo_id, config) as adapter:
-        refs = adapter.get_cc_commits()
+        refs = adapter.get_cc_commits(subtype=args.subtype)
 
         first_ref = None
         for ref in refs:
@@ -91,6 +92,7 @@ def main(args=None, log_function=print):
                 adapter=adapter,
                 repository=args.repository,
                 repository_id_modifier=args.repository_id_modifier,
+                subtype=args.subtype,
                 pattern=args.report_file,
                 log_function=log_function,
             )
