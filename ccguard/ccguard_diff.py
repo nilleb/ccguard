@@ -12,12 +12,13 @@ def print_diff_report(
     adapter,
     repository=".",
     repository_id_modifier=None,
+    subtype=None,
     pattern=None,
     log_function=print,
 ):
     dest = (pattern or "diff-{}-{}.html").format(first_ref, second_ref)
-    fdata = adapter.retrieve_cc_data(first_ref)
-    sdata = adapter.retrieve_cc_data(second_ref)
+    fdata = adapter.retrieve_cc_data(first_ref, subtype=subtype)
+    sdata = adapter.retrieve_cc_data(second_ref, subtype=subtype)
     first_fd = io.BytesIO(fdata)
     second_fd = io.BytesIO(sdata)
     source = ccguard.GitAdapter(repository, repository_id_modifier).get_root_path()
@@ -82,7 +83,7 @@ def main(args=None, log_function=print):
     second = ccguard.get_output(command, args.repository).rstrip("\n")
 
     with adapter_class(repo_id, config) as adapter:
-        refs = adapter.get_cc_commits()
+        refs = adapter.get_cc_commits(subtype=args.subtype)
         first_ref, second_ref = None, None
 
         for ref in refs:
@@ -100,6 +101,7 @@ def main(args=None, log_function=print):
                 adapter=adapter,
                 repository=args.repository,
                 repository_id_modifier=args.repository_id_modifier,
+                subtype=args.subtype,
                 pattern=args.report_file,
                 log_function=log_function,
             )
