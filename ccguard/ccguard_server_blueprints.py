@@ -1,6 +1,7 @@
 import datetime
 import hashlib
 import io
+import re
 import logging
 import socket
 import sqlite3
@@ -301,18 +302,30 @@ class SqliteServerAdapter(object):
 
     def list_repositories(self) -> frozenset:
         query = (
-            "SELECT name FROM sqlite_master "
-            'WHERE type = "table" AND name LIKE "timestamped_coverage_%"'
+            'SELECT name FROM sqlite_master WHERE type = "table" AND name LIKE "{}"'
+        ).format(
+            ccguard.SqliteAdapter._table_name_pattern.format(
+                metric="%", repository_id="%"
+            )
         )
 
         tuples = self.conn.execute(query).fetchall()
 
-        prefix_len = len("timestamped_coverage_")
-        return frozenset({row[0][prefix_len:] for row in tuples})
+        repositories_pattern = ccguard.SqliteAdapter._table_name_pattern.format(
+            metric="(?P<metric>.[a-zA-Z0-9]+)",
+            repository_id="(?P<repository_id>.[a-zA-Z0-9_]+)",
+        )
+
+        def extract_repository_id(table_name):
+            return re.match(repositories_pattern, table_name).group("repository_id")
+
+        return frozenset({extract_repository_id(row[0]) for row in tuples})
 
     def commits_count(self, repository_id) -> frozenset:
-        query = "SELECT count(*) FROM timestamped_coverage_{repository_id} ".format(
-            repository_id=repository_id
+        query = "SELECT count(*) FROM {} ".format(
+            ccguard.SqliteAdapter._table_name_pattern.format(
+                metric="coverage", repository_id=repository_id
+            )
         )
         tuples = self.conn.execute(query).fetchone()
         return next(iter(tuples))
@@ -441,22 +454,24 @@ def api_repositories_debug_v2():
     return jsonify({"repositories": list(response)})
 
 
-def api_references_all_common(repository_id):
+def api_references_all_common(repository_id, subtype):
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
-        return adapter.get_cc_commits()
+        return adapter.get_cc_commits(subtype=subtype)
 
 
 @api_v1.route("/references/<string:repository_id>/all", methods=["GET"])
 def api_references_all_v1(repository_id):
-    commits = api_references_all_common(repository_id)
+    subtype = request.args.get("subtype")
+    commits = api_references_all_common(repository_id, subtype)
     return jsonify(list(commits))
 
 
 @api_v2.route("/references/<string:repository_id>/all", methods=["GET"])
 def api_references_all_v2(repository_id):
-    commits = api_references_all_common(repository_id)
+    subtype = request.args.get("subtype")
+    commits = api_references_all_common(repository_id, subtype)
     return jsonify({"references": list(commits)})
 
 
@@ -470,11 +485,12 @@ def iter_callable(refs):
 
 @api_v1.route("/references/<string:repository_id>/choose", methods=["POST"])
 def api_references_choose_v1(repository_id):
+    subtype = request.args.get("subtype")
     commits = request.data
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
-        references = adapter.get_cc_commits()
+        references = adapter.get_cc_commits(subtype=subtype)
         parent = ccguard.determine_parent_commit(references, iter_callable(commits))
         if not parent:
             abort(404)
@@ -561,8 +577,8 @@ def minimize_xml(xml):
     return lxml.etree.tostring(elem)
 
 
-def get_last_commit(adapter, branch=None):
-    commit_id = adapter.get_cc_commits(branch=branch, count=1)
+def get_last_commit(adapter, branch=None, subtype=None):
+    commit_id = adapter.get_cc_commits(branch=branch, count=1, subtype=subtype)
 
     if not commit_id:
         return None
@@ -577,14 +593,15 @@ def api_status_badge(repository_id):
     branch = request.args.get("branch") or "master"
     red = request.args.get("red") or "red"
     green = request.args.get("green") or "green"
+    subtype = request.args.get("subtype")
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
-        commit_id = get_last_commit(adapter, branch)
+        commit_id = get_last_commit(adapter, branch, subtype)
         if not commit_id:
             return Response(minimize_xml(BADGE_UNKNOWN), mimetype="image/svg+xml")
 
-        rate, *_ = adapter.get_commit_info(commit_id)
+        rate, *_ = adapter.get_commit_info(commit_id, subtype=subtype)
         rate = int(rate) if rate > 1 else int(rate * 100)
         rate = 100 if rate > 100 else rate
 
@@ -616,10 +633,11 @@ def api_reference_download_data(repository_id, commit_id):
 @authenticated
 @admin_required
 def api_reference_download_data_debug(repository_id, commit_id):
+    subtype = request.args.get("subtype")
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
-        cc_reference_data = adapter.retrieve_cc_data(commit_id)
+        cc_reference_data = adapter.retrieve_cc_data(commit_id, subtype=subtype)
         return {
             "commit_id": commit_id,
             "data_len": len(cc_reference_data) if cc_reference_data else None,
@@ -632,13 +650,14 @@ def api_reference_download_data_debug(repository_id, commit_id):
 )
 @authenticated
 def api_upload_reference(repository_id, commit_id):
+    subtype = request.args.get("subtype")
     branch = request.args.get("branch")
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
         data = request.get_data()
         try:
-            adapter.persist(commit_id, data, branch=branch)
+            adapter.persist(commit_id, data, branch=branch, subtype=subtype)
         except Exception:
             logging.exception("Unexpected exception on persist.")
             abort(400, "Invalid request.")
@@ -651,13 +670,14 @@ def api_upload_reference(repository_id, commit_id):
     methods=["GET"],
 )
 def api_compare(repository_id, commit_id1, commit_id2):
+    subtype = request.args.get("subtype")
     tolerance = int(request.args.get("tolerance") or 0)
     hard_minimum = int(request.args.get("hard_minimum") or 0)
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
-        reference = retrieve(adapter, commit_id1)
-        challenger = retrieve(adapter, commit_id2)
+        reference = retrieve(adapter, commit_id1, subtype=subtype)
+        challenger = retrieve(adapter, commit_id2, subtype=subtype)
         if not reference or not challenger:
             abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
         diff = CoberturaDiff(reference, challenger)
@@ -669,13 +689,15 @@ def api_compare(repository_id, commit_id1, commit_id2):
 
 @web.route("/report/<string:repository_id>/<string:commit_id>", methods=["GET"])
 def web_generate_report(repository_id, commit_id):
-    return report(repository_id, commit_id=commit_id)
+    subtype = request.args.get("subtype")
+    return report(repository_id, commit_id=commit_id, subtype=subtype)
 
 
 @web.route("/main/<string:repository_id>", methods=["GET"])
 def web_main(repository_id):
     branch = request.args.get("branch") or "master"
-    return report(repository_id, branch=branch)
+    subtype = request.args.get("subtype")
+    return report(repository_id, branch=branch, subtype=subtype)
 
 
 SOURCES_MESSAGE = """
@@ -697,12 +719,12 @@ preElement.innerHTML = "ccguard_server_address=" + serverAddress + " ccguard_sho
 """  # noqa
 
 
-def report(repository_id, commit_id=None, branch=None):
+def report(repository_id, commit_id=None, branch=None, subtype=None):
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
-        commit_id = commit_id or get_last_commit(adapter, branch)
-        reference = retrieve(adapter, commit_id)
+        commit_id = commit_id or get_last_commit(adapter, branch, subtype)
+        reference = retrieve(adapter, commit_id, subtype=subtype)
         if not reference:
             abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
         # sources_message = SOURCES_MESSAGE.format(commit_id=commit_id)
@@ -715,8 +737,8 @@ def report(repository_id, commit_id=None, branch=None):
         return report.generate()
 
 
-def retrieve(adapter, commit_id, source="ccguard"):
-    cc_reference_data = adapter.retrieve_cc_data(commit_id)
+def retrieve(adapter, commit_id, source="ccguard", subtype=None):
+    cc_reference_data = adapter.retrieve_cc_data(commit_id, subtype=subtype)
     reference_fd = io.BytesIO(cc_reference_data)
 
     try:
@@ -730,11 +752,12 @@ def retrieve(adapter, commit_id, source="ccguard"):
     methods=["GET"],
 )
 def web_generate_diff(repository_id, commit_id1, commit_id2):
+    subtype = request.args.get("subtype")
     config = ccguard.configuration()
     adapter_class = ccguard.adapter_factory(None, config)
     with adapter_class(repository_id, config) as adapter:
-        reference = retrieve(adapter, commit_id1)
-        challenger = retrieve(adapter, commit_id2)
+        reference = retrieve(adapter, commit_id1, subtype=subtype)
+        challenger = retrieve(adapter, commit_id2, subtype=subtype)
         if not reference or not challenger:
             abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
         delta = HtmlReporterDelta(reference, challenger)
