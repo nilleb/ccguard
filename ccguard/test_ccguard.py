@@ -1,5 +1,6 @@
 import io
 import os
+import re
 from . import ccguard
 from unittest.mock import MagicMock, patch
 from pycobertura import Cobertura, CoberturaDiff
@@ -66,7 +67,7 @@ def test_persist():
     ccguard.persist(repo, reference, path)
 
     repo.get_current_commit_id.assert_called()
-    reference.persist.assert_called_with(commit_id, data, branch)
+    reference.persist.assert_called_with(commit_id, data, branch, None)
 
 
 def test_parse():
@@ -164,6 +165,33 @@ def test_sqladapter():
         # rather an integration test: we need to cleanup
         os.unlink("./ccguard.db")
         os.unlink(abspath)
+
+
+class MockRequest(object):
+    pattern = re.compile(".*api/v1/references/test/(?P<commit_id>.*)/data.*")
+
+    def __init__(self):
+        self.data = {}
+
+    def put(self, uri, headers, data):
+        commit_id = self.pattern.match(uri).group("commit_id")
+        self.data[commit_id] = data
+
+    def get(self, uri):
+        if "/all" in uri:
+            return MagicMock(json=MagicMock(return_value=list(self.data.keys())))
+        if "/data" in uri:
+            commit_id = self.pattern.match(uri).group("commit_id")
+            return MagicMock(content=self.data.get(commit_id))
+
+
+def test_webadapter():
+    with patch.object(ccguard, "requests") as mock:
+        mock_object = MockRequest()
+        mock.put = MagicMock(side_effect=mock_object.put)
+        mock.get = MagicMock(side_effect=mock_object.get)
+        with ccguard.WebAdapter("test", {}) as adapter:
+            adapter_scenario(adapter)
 
 
 def test_adapter_factory():
