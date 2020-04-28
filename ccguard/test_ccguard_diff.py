@@ -16,7 +16,7 @@ def test_ccguard_diff():
     adapter = MagicMock()
 
     adapter.get_cc_commits = MagicMock(return_value=[commit1, "aaaa", commit2, "bbbb"])
-    adapter.retrieve_cc_data = MagicMock(side_effect=lambda commit: data[commit])
+    adapter.retrieve_cc_data = MagicMock(side_effect=lambda commit, **_: data[commit])
     adapter_class = MagicMock()
     adapter_class.__enter__ = MagicMock(return_value=adapter)
     adapter_factory = MagicMock(return_value=adapter_class)

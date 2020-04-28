@@ -196,76 +196,105 @@ class ReferenceAdapter(object):
     def __exit__(self, exc_type, exc_value, traceback):
         pass
 
-    def get_cc_commits(self, count: int = -1, branch=None) -> frozenset:
+    def get_cc_commits(
+        self, count: int = -1, branch=None, subtype: str = None
+    ) -> frozenset:
         raise NotImplementedError
 
-    def retrieve_cc_data(self, commit_id: str) -> Optional[bytes]:
+    def retrieve_cc_data(self, commit_id: str, subtype: str = None) -> Optional[bytes]:
         raise NotImplementedError
 
-    def persist(self, commit_id: str, data: bytes, branch: str = None):
+    def persist(
+        self, commit_id: str, data: bytes, branch: str = None, subtype: str = None
+    ):
         raise NotImplementedError
 
     def dump(self) -> list:
         raise NotImplementedError
 
-    def get_commit_info(self, commit_id: str) -> Tuple[float, int, int]:
+    def get_commit_info(
+        self, commit_id: str, subtype: str = None
+    ) -> Tuple[float, int, int]:
         raise NotImplementedError
 
 
 class SqliteAdapter(ReferenceAdapter):
-    def __init__(self, repository_id, config):
+    _table_name_pattern = "timestamped_{metric}_{repository_id}_v1"
+
+    def __init__(self, repository_id, config, metric="coverage"):
         super().__init__(repository_id, config)
         dbpath = str(config.get("sqlite.dbpath"))
-        logging.debug(dbpath)
+        self.metric = metric
         self.conn = sqlite3.connect(dbpath)
         self._create_table()
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.conn.close()
 
-    def get_cc_commits(self, count: int = -1, branch=None) -> frozenset:
-        where_clause = 'WHERE branch="{}"'.format(branch) if branch else ""
+    def _table_name(self):
+        return self._table_name_pattern.format(
+            metric=self.metric, repository_id=self.repository_id
+        )
+
+    def get_cc_commits(
+        self, count: int = -1, branch: str = None, subtype: str = None
+    ) -> frozenset:
+        where_branch_clause = 'branch="{}"'.format(branch) if branch else ""
+        where_subtype_clause = "type={}".format(subtype or "default") if subtype else ""
+        conditions = [
+            cond for cond in (where_branch_clause, where_subtype_clause) if cond
+        ]
+        where_conditions = " and ".join(conditions)
+        where_clause = "WHERE {}".format(where_conditions) if where_conditions else ""
         limit_clause = "LIMIT {}".format(count) if count > 0 else ""
         commits_query = (
             "SELECT commit_id "
-            "FROM timestamped_coverage_{repository_id} "
+            "FROM  {table_name} "
             "{where_clause} "
             "ORDER BY collected_at DESC "
             "{limit_clause}"
         ).format(
             where_clause=where_clause,
             limit_clause=limit_clause,
-            repository_id=self.repository_id,
+            table_name=self._table_name(),
         )
         return frozenset(
             c for ct in self.conn.execute(commits_query).fetchall() for c in ct
         )
 
-    def get_commit_info(self, commit_id: str) -> Tuple[float, int, int]:
+    def get_commit_info(self, commit_id: str, subtype: str) -> Tuple[float, int, int]:
         commit_query = (
             "SELECT line_rate, lines_covered, lines_valid "
-            "FROM timestamped_coverage_{repository_id} "
-            "WHERE commit_id = '{commit_id}';"
-        ).format(repository_id=self.repository_id, commit_id=commit_id)
+            "FROM {table_name} "
+            "WHERE commit_id = '{commit_id}' and type='{type}'';"
+        ).format(
+            table_name=self._table_name(),
+            commit_id=commit_id,
+            type=subtype or "default",
+        )
         one = self.conn.execute(commit_query).fetchone()
         return one
 
     def _update_lts(self, commit_id, path):
         query = (
-            "UPDATE timestamped_coverage_{repository_id} "
-            "SET lts = 1, coverage_data = '{path}' "
+            "UPDATE {table_name} "
+            "SET lts = 1, data = '{path}' "
             "WHERE commit_id = '{commit_id}';"
-        ).format(repository_id=self.repository_id, commit_id=commit_id, path=path)
+        ).format(table_name=self._table_name(), commit_id=commit_id, path=path)
         self.conn.execute(query)
         self.conn.commit()
 
-    def retrieve_cc_data(self, commit_id: str) -> Optional[bytes]:
-        query = 'SELECT coverage_data, lts FROM timestamped_coverage_{repository_id}\
-                WHERE commit_id="{commit_id}"'.format(
-            repository_id=self.repository_id, commit_id=commit_id
+    def retrieve_cc_data(self, commit_id: str, subtype: str = None) -> Optional[bytes]:
+        query = (
+            "SELECT data, lts FROM {table_name} "
+            'WHERE commit_id="{commit_id}" and type="{type}"'
+        ).format(
+            table_name=self._table_name(),
+            commit_id=commit_id,
+            type=subtype or "default",
         )
 
-        self._update_count(commit_id)
+        self._update_count(commit_id, subtype)
 
         result = self.conn.execute(query).fetchall()
 
@@ -278,11 +307,15 @@ class SqliteAdapter(ReferenceAdapter):
                     return fd.read()
         return None
 
-    def _update_count(self, commit_id):
+    def _update_count(self, commit_id: str, subtype: str):
         query = (
-            "UPDATE timestamped_coverage_{repository_id} "
-            "SET count = count + 1 WHERE commit_id = '{commit_id}';"
-        ).format(repository_id=self.repository_id, commit_id=commit_id)
+            "UPDATE {table_name} "
+            "SET count = count + 1 WHERE commit_id = '{commit_id}' and type='{type}';"
+        ).format(
+            table_name=self._table_name(),
+            commit_id=commit_id,
+            type=subtype or "default",
+        )
         try:
             self.conn.execute(query)
             self.conn.commit()
@@ -300,16 +333,24 @@ class SqliteAdapter(ReferenceAdapter):
         except ET.XMLSyntaxError:
             return 0.0, 0, 0
 
-    def persist(self, commit_id: str, data: bytes, branch: str = None):
+    def persist(
+        self, commit_id: str, data: bytes, branch: str = None, subtype: str = None
+    ):
         if not data or not isinstance(data, bytes):
             raise ValueError("Unwilling to persist invalid data.")
 
         query = (
-            "INSERT INTO timestamped_coverage_{repository_id} "
-            "(commit_id, coverage_data, branch, line_rate, lines_covered, lines_valid) "
-            "VALUES (?, ?, ?, ?, ?, ?) "
-        ).format(repository_id=self.repository_id)
-        data_tuple = (commit_id, data, branch, *self._get_line_coverage(data))
+            "INSERT INTO {table_name} "
+            "(commit_id, data, branch, type, line_rate, lines_covered, lines_valid) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) "
+        ).format(table_name=self._table_name())
+        data_tuple = (
+            commit_id,
+            data,
+            branch,
+            subtype or "default",
+            *self._get_line_coverage(data),
+        )
         try:
             self.conn.execute(query, data_tuple)
             self.conn.commit()
@@ -317,17 +358,16 @@ class SqliteAdapter(ReferenceAdapter):
             logging.debug("This commit seems to have already been recorded.")
 
     def dump(self) -> list:
-        query = """SELECT commit_id, coverage_data
-        FROM timestamped_coverage_{repository_id}
-        ORDER BY collected_at DESC""".format(
-            repository_id=self.repository_id
-        )
+        query = (
+            "SELECT commit_id, data FROM {table_name} ORDER BY collected_at DESC"
+        ).format(table_name=self._table_name())
         return self.conn.execute(query).fetchall()
 
     def _create_table(self):
         ddl = (
-            "CREATE TABLE IF NOT EXISTS `timestamped_coverage_{repository_id}` ("
+            "CREATE TABLE IF NOT EXISTS `{table_name}` ("
             "`commit_id` varchar(40) NOT NULL, "
+            "`type` varchar(40) NOT NULL DEFAULT 'default', "
             "`branch` varchar(70), "
             "`collected_at` ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
             "`count` INT DEFAULT 1, "
@@ -335,10 +375,10 @@ class SqliteAdapter(ReferenceAdapter):
             "`lines_covered` INT DEFAULT 0, "
             "`lines_valid` INT DEFAULT 0, "
             "`lts` INT DEFAULT 0, "
-            "`coverage_data` BLOB NOT NULL default '', "
-            "PRIMARY KEY  (`commit_id`) );"
+            "`data` BLOB NOT NULL default '', "
+            "PRIMARY KEY  (`commit_id`, `type`) );"
         )
-        statement = ddl.format(repository_id=self.repository_id)
+        statement = ddl.format(table_name=self._table_name())
         self.conn.execute(statement)
 
 
@@ -355,16 +395,18 @@ class WebAdapter(ReferenceAdapter):
         self.token = token if token else config.get(conf_key, None)
         super().__init__(repository_id, config)
 
-    def get_cc_commits(self, count: int = -1, branch=None) -> frozenset:
-        options = [
-            "count={}".format(count) if count > 0 else "",
-            "branch={}".format(branch) if branch else "",
-        ]
-        options = [opt for opt in options if opt]
-        options_str = "?{}".format("&".join(options)) if options else ""
+    def _query_string(self, items: dict):
+        optional_args = ["{}={}".format(k, v) for k, v in items.items() if v]
+        optargs_str = "&".join([arg for arg in optional_args])
+        return "?{}".format(optargs_str) if optargs_str else ""
+
+    def get_cc_commits(
+        self, count: int = -1, branch=None, subtype: str = None
+    ) -> frozenset:
+        options = {"branch": branch, "count": count, "subtype": subtype}
 
         uri = "{p.server}/api/v1/references/{p.repository_id}/all{options}"
-        uri = uri.format(p=self, options=options_str)
+        uri = uri.format(p=self, options=self._query_string(options))
 
         r = requests.get(uri)
 
@@ -377,15 +419,17 @@ class WebAdapter(ReferenceAdapter):
             )
             return frozenset()
 
-    def retrieve_cc_data(self, commit_id: str) -> Optional[bytes]:
+    def retrieve_cc_data(self, commit_id: str, subtype: str = None) -> Optional[bytes]:
+        optional_args = "?{}".format(subtype) if subtype else ""
         r = requests.get(
-            "{p.server}/api/v1/references/{p.repository_id}/{commit_id}/data".format(
-                p=self, commit_id=commit_id
+            "{p.server}/api/v1/references/"
+            "{p.repository_id}/{commit_id}/data{optional_args}".format(
+                p=self, commit_id=commit_id, optional_args=optional_args
             )
         )
         return r.content
 
-    def persist(self, commit_id: str, data: bytes, branch=None):
+    def persist(self, commit_id: str, data: bytes, branch=None, subtype: str = None):
         if not data or not isinstance(data, bytes):
             raise ValueError("Unwilling to persist invalid data.")
 
@@ -393,11 +437,11 @@ class WebAdapter(ReferenceAdapter):
         if self.token:
             headers["Authorization"] = self.token
 
-        optional_args = "?branch={}".format(branch) if branch else ""
+        options = {"branch": branch, "subtype": subtype}
         requests.put(
             "{p.server}/api/v1/references/"
             "{p.repository_id}/{commit_id}/data{optional_args}".format(
-                p=self, commit_id=commit_id, optional_args=optional_args,
+                p=self, commit_id=commit_id, optional_args=self._query_string(options),
             ),
             headers=headers,
             data=data,
@@ -434,12 +478,13 @@ def persist(
     reference_adapter: ReferenceAdapter,
     report_file: str,
     branch: str = None,
+    subtype: str = None,
 ):
     with open(report_file, "rb") as fd:
         data = fd.read()
         current_commit = repo_adapter.get_current_commit_id()
         branch = branch if branch else repo_adapter.get_current_branch()
-        reference_adapter.persist(current_commit, data, branch)
+        reference_adapter.persist(current_commit, data, branch, subtype)
         logging.info("Data for commit %s persisted successfully.", current_commit)
 
 
@@ -470,6 +515,14 @@ def parse_common_args(parser=None):
         "--repository-desambiguate",
         dest="repository_id_modifier",
         help="A token to distinguish repositories with the same first commit ID.",
+    )
+    parser.add_argument(
+        "-s",
+        "--subtype",
+        dest="subtype",
+        help="A supplementary characteristic of the metric being collected."
+        "Whether the code coverage has been colllected during the execution of "
+        "unit tests or integration tests, for example.",
     )
 
     return parser
@@ -781,7 +834,7 @@ def main(args=None, log_function=print, logging_module=logging):
     config = configuration(args.repository)
 
     with adapter_factory(args.adapter, config)(repository_id, config) as adapter:
-        reference_commits = adapter.get_cc_commits()
+        reference_commits = adapter.get_cc_commits(subtype=args.subtype)
         logging_module.debug(
             "Found the following reference commits: %r", reference_commits
         )
@@ -802,7 +855,9 @@ def main(args=None, log_function=print, logging_module=logging):
 
         if commit_id:
             logging_module.info("Retrieving data for reference commit %s.", commit_id)
-            cc_reference_data = adapter.retrieve_cc_data(commit_id)
+            cc_reference_data = adapter.retrieve_cc_data(
+                commit_id, subtype=args.subtype
+            )
             logging_module.debug("Reference data: %r", cc_reference_data)
             if cc_reference_data:
                 reference_fd = io.BytesIO(cc_reference_data)
@@ -821,7 +876,7 @@ def main(args=None, log_function=print, logging_module=logging):
             print_cc_report(challenger, report_file="cc.html" if args.html else None)
 
             if not args.uncommitted:
-                persist(git, adapter, args.report, args.branch)
+                persist(git, adapter, args.report, args.branch, args.subtype)
         else:
             logging_module.error("No recent code coverage data found.")
 
