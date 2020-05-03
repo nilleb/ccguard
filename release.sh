@@ -4,15 +4,12 @@
 #   - the section shall be named ccguard
 # - bump package version in setup.py
 
-PKG_NAME=$(python setup.py --name)
-PKG_VERSION=$(python setup.py --version)
-
-sed -i "" "s/\(__version__ = \"\).*\(\"\)/\1${PKG_VERSION}\2/g" ccguard/__init__.py
+. ./update-version.sh
 
 git add ccguard/__init__.py
 git commit -m "chore: bump version"
 
 git tag -am "release v${PKG_VERSION}" v${PKG_VERSION}
 git push --tags
-python setup.py bdist_wheel
+./common-distrib.sh
 twine upload --repository ccguard dist/${PKG_NAME}-${PKG_VERSION}-py3-none-any.whl
