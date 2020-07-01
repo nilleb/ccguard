@@ -15,4 +15,4 @@ from .ccguard import (  # noqa
     get_output,
 )
 
-__version__ = "0.7.1"
+__version__ = "0.7.2"
