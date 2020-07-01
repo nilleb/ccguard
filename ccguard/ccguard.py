@@ -182,7 +182,7 @@ class GitAdapter(object):
 
     def get_current_branch(self):
         command = "git rev-parse --abbrev-ref HEAD"
-        return get_output(command, working_folder=self.repository_folder)
+        return get_output(command, working_folder=self.repository_folder).rstrip()
 
 
 class ReferenceAdapter(object):
@@ -258,6 +258,7 @@ class SqliteAdapter(ReferenceAdapter):
             limit_clause=limit_clause,
             table_name=self._table_name(),
         )
+        logging.debug(commits_query)
         return frozenset(
             c for ct in self.conn.execute(commits_query).fetchall() for c in ct
         )
@@ -266,7 +267,7 @@ class SqliteAdapter(ReferenceAdapter):
         commit_query = (
             "SELECT line_rate, lines_covered, lines_valid "
             "FROM {table_name} "
-            "WHERE commit_id = '{commit_id}' and type='{type}'';"
+            "WHERE commit_id = '{commit_id}' and type='{type}';"
         ).format(
             table_name=self._table_name(),
             commit_id=commit_id,

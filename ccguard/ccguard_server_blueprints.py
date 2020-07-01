@@ -679,7 +679,7 @@ def api_compare(repository_id, commit_id1, commit_id2):
         reference = retrieve(adapter, commit_id1, subtype=subtype)
         challenger = retrieve(adapter, commit_id2, subtype=subtype)
         if not reference or not challenger:
-            abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
+            abort(404, "Sorry, no data found.")
         diff = CoberturaDiff(reference, challenger)
         has_coverage_improved = ccguard.has_better_coverage(
             diff, tolerance=tolerance, hard_minimum=hard_minimum
@@ -726,7 +726,7 @@ def report(repository_id, commit_id=None, branch=None, subtype=None):
         commit_id = commit_id or get_last_commit(adapter, branch, subtype)
         reference = retrieve(adapter, commit_id, subtype=subtype)
         if not reference:
-            abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
+            abort(404, "Sorry, no data found.")
         # sources_message = SOURCES_MESSAGE.format(commit_id=commit_id)
         report = HtmlReporter(
             reference,
@@ -759,7 +759,7 @@ def web_generate_diff(repository_id, commit_id1, commit_id2):
         reference = retrieve(adapter, commit_id1, subtype=subtype)
         challenger = retrieve(adapter, commit_id2, subtype=subtype)
         if not reference or not challenger:
-            abort(404, b"<html><h1>Huh-oh</h1><p>Sorry, no data found.</p></html>")
+            abort(404, "Sorry, no data found.")
         delta = HtmlReporterDelta(reference, challenger)
         return delta.generate()
 
