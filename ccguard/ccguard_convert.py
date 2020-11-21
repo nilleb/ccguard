@@ -159,7 +159,8 @@ def parse_args(args=None):
     )
 
     parser.add_argument(
-        "report", help="The report to convert",
+        "report",
+        help="The report to convert",
     )
 
     parser.add_argument(

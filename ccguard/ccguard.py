@@ -441,7 +441,9 @@ class WebAdapter(ReferenceAdapter):
         requests.put(
             "{p.server}/api/v1/references/"
             "{p.repository_id}/{commit_id}/data{optional_args}".format(
-                p=self, commit_id=commit_id, optional_args=self._query_string(options),
+                p=self,
+                commit_id=commit_id,
+                optional_args=self._query_string(options),
             ),
             headers=headers,
             data=data,

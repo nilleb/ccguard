@@ -39,13 +39,20 @@ def parse_args(args=None):
         default="127.0.0.1",
     )
     parser.add_argument(
-        "--cert", dest="certificate", help="the ssl certificate pem file",
+        "--cert",
+        dest="certificate",
+        help="the ssl certificate pem file",
     )
     parser.add_argument(
-        "--private-key", dest="private_key", help="the ssl private key pem file",
+        "--private-key",
+        dest="private_key",
+        help="the ssl private key pem file",
     )
     parser.add_argument(
-        "--port", dest="port", help="the port to listen on", type=int,
+        "--port",
+        dest="port",
+        help="the port to listen on",
+        type=int,
     )
 
     return parser.parse_args(args)

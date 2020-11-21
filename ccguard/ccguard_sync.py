@@ -80,7 +80,9 @@ def parse_args(args=None):
         action="store_true",
     )
     parser.add_argument(
-        "--commit_id", dest="commit_id", help="Limit the transfer to this commit only",
+        "--commit_id",
+        dest="commit_id",
+        help="Limit the transfer to this commit only",
     )
 
     return parser.parse_args(args)
