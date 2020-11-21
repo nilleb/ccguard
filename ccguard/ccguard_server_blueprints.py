@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import datetime
 import hashlib
 import io
@@ -92,11 +94,11 @@ class PersonalAccessToken(object):
             query = (
                 "SELECT user_id, name, revoked "
                 "FROM ccguard_server_tokens "
-                'WHERE user_id = "{}"'.format(user_id)
+                "WHERE user_id = ?"
             )
 
             try:
-                rows = conn.execute(query).fetchall()
+                rows = conn.execute(query, (user_id,)).fetchall()
             except sqlite3.OperationalError:
                 rows = []
 
@@ -114,13 +116,15 @@ class PersonalAccessToken(object):
         with PersonalAccessToken._get_connection(config) as conn:
 
             query = (
-                "DELETE "
-                "FROM ccguard_server_tokens "
-                'WHERE user_id = "{}" and name = "{}"'.format(user_id, name)
+                "DELETE " "FROM ccguard_server_tokens " "WHERE user_id = ? and name = ?"
             )
 
+            data_tuple = (
+                user_id,
+                name,
+            )
             try:
-                conn.execute(query)
+                conn.execute(query, data_tuple)
             except sqlite3.OperationalError:
                 logging.exception("Unable to delete the token %s, %s", user_id, name)
 
@@ -137,11 +141,11 @@ class PersonalAccessToken(object):
             query = (
                 "SELECT user_id, name, revoked "
                 "FROM ccguard_server_tokens "
-                'WHERE value = "{}"'.format(value)
+                "WHERE value = ?"
             )
 
             try:
-                row = conn.execute(query).fetchone()
+                row = conn.execute(query, (value,)).fetchone()
             except sqlite3.OperationalError:
                 row = None
 
@@ -264,6 +268,7 @@ class SqliteServerAdapter(object):
             data.get("commits_count", 0),
             data.get("version", "unknown"),
         )
+
         try:
             self.conn.execute(statement, data_tuple)
             self.conn.commit()
@@ -271,14 +276,20 @@ class SqliteServerAdapter(object):
             logging.info("This IP seems to have already been recorded.")
             statement = (
                 "UPDATE ccguard_server_stats "
-                f'SET repositories_count = {data["repositories_count"]}, '
-                f'commits_count = {data["commits_count"]}, '
-                f'last_updated = "{datetime.datetime.now()}", '
-                f'version = "{data["version"]}" '
-                f'WHERE ip = "{data["ip"]}"'
+                "SET repositories_count = ?, "
+                "commits_count = ?, "
+                "last_updated = ?, "
+                "version = ? "
+                "WHERE ip = ?"
             )
-            logging.debug(statement)
-            self.conn.execute(statement)
+            data_tuple = (
+                data["repositories_count"],
+                data["commits_count"],
+                datetime.datetime.now(),
+                data["version"],
+                data["ip"],
+            )
+            self.conn.execute(statement, data_tuple)
             self.conn.commit()
 
     def totals(self) -> dict:
@@ -301,15 +312,14 @@ class SqliteServerAdapter(object):
         return data
 
     def list_repositories(self) -> frozenset:
-        query = (
-            'SELECT name FROM sqlite_master WHERE type = "table" AND name LIKE "{}"'
-        ).format(
+        query = 'SELECT name FROM sqlite_master WHERE type = "table" AND name LIKE ?'
+
+        data_tuple = (
             ccguard.SqliteAdapter._table_name_pattern.format(
                 metric="%", repository_id="%"
-            )
+            ),
         )
-
-        tuples = self.conn.execute(query).fetchall()
+        tuples = self.conn.execute(query, data_tuple).fetchall()
 
         repositories_pattern = ccguard.SqliteAdapter._table_name_pattern.format(
             metric="(?P<metric>.[a-zA-Z0-9]+)",
@@ -322,11 +332,10 @@ class SqliteServerAdapter(object):
         return frozenset({extract_repository_id(row[0]) for row in tuples})
 
     def commits_count(self, repository_id) -> frozenset:
-        query = "SELECT count(*) FROM {} ".format(
-            ccguard.SqliteAdapter._table_name_pattern.format(
-                metric="coverage", repository_id=repository_id
-            )
+        table_name = ccguard.SqliteAdapter._table_name_pattern.format(
+            metric="coverage", repository_id=repository_id
         )
+        query = f"SELECT count(*) FROM {table_name}"
         tuples = self.conn.execute(query).fetchone()
         return next(iter(tuples))
 
@@ -615,7 +624,8 @@ def api_status_badge(repository_id):
 
 
 @api_v1.route(
-    "/references/<string:repository_id>/<string:commit_id>/data", methods=["GET"],
+    "/references/<string:repository_id>/<string:commit_id>/data",
+    methods=["GET"],
 )
 def api_reference_download_data(repository_id, commit_id):
     config = ccguard.configuration()
@@ -628,7 +638,8 @@ def api_reference_download_data(repository_id, commit_id):
 
 
 @api_v1.route(
-    "/references/<string:repository_id>/<string:commit_id>/debug", methods=["GET"],
+    "/references/<string:repository_id>/<string:commit_id>/debug",
+    methods=["GET"],
 )
 @authenticated
 @admin_required

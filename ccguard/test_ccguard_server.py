@@ -1,6 +1,6 @@
 import os
 import json
-from sqlite3 import IntegrityError
+from sqlite3 import IntegrityError, OperationalError
 from unittest.mock import MagicMock, call, patch
 
 from . import ccguard_server as csm
@@ -51,7 +51,7 @@ def test_put_token_already():
     with patch.object(cbm, "sqlite3") as sqlite_mock:
 
         def execute_mock(*args):
-            if len(args) > 1:
+            if args[0].startswith("INSERT"):
                 raise IntegrityError
             else:
                 return fetchone
@@ -61,6 +61,7 @@ def test_put_token_already():
         enter = MagicMock(__enter__=MagicMock(return_value=execute))
         sqlite_mock.connect = MagicMock(return_value=enter)
         sqlite_mock.IntegrityError = IntegrityError
+        sqlite_mock.OperationalError = OperationalError
         with csm.app.test_client() as test_client:
             result = test_client.put(
                 "/api/v1/personal_access_token/{}".format(user_id),
@@ -527,7 +528,10 @@ def test_put_reference():
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with csm.app.test_client() as test_client:
             url = "/api/v1/references/{}/{}/data".format(repository_id, commit_id)
-            result = test_client.put(url, data=data,)
+            result = test_client.put(
+                url,
+                data=data,
+            )
             assert result.status_code == 200
             assert "received" in result.data.decode("utf-8")
             assert adapter.persist.called
@@ -548,7 +552,10 @@ def test_put_reference_raising():
     with patch.object(ccm, "adapter_factory", return_value=adapter_factory):
         with csm.app.test_client() as test_client:
             url = "/api/v1/references/{}/{}/data".format(repository_id, commit_id)
-            result = test_client.put(url, data=None,)
+            result = test_client.put(
+                url,
+                data=None,
+            )
             assert result.status_code != 200
 
 
