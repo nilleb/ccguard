@@ -3,5 +3,5 @@ gitpython==3.0.5
 redis==3.3.11
 flask==1.1.1
 requests==2.22.0
-lxml==4.6.3
+lxml==4.6.5
 colour
